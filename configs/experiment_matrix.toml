@@ -1,0 +1,64 @@
+protocol_version = "0.1-draft"
+target = "target_v"
+required_splits = ["random", "scaffold", "chemical_family", "external"]
+required_seeds = [17, 42, 73, 101, 314]
+
+[[experiment]]
+id = "mean-only"
+representation = "none"
+head = "mean"
+status = "implemented"
+
+[[experiment]]
+id = "ecfp-tanimoto-1nn"
+representation = "ecfp-radius2-2048"
+head = "tanimoto_1nn"
+status = "implemented"
+
+[[experiment]]
+id = "ecfp-ridge"
+representation = "ecfp-radius2-2048"
+head = "ridge"
+status = "implemented"
+
+[[experiment]]
+id = "ecfp-random-forest"
+representation = "ecfp-radius2-2048"
+head = "random_forest"
+status = "implemented"
+
+[[experiment]]
+id = "mist-frozen-linear"
+representation = "mist-pinned-checkpoint"
+head = "linear"
+status = "planned"
+
+[[experiment]]
+id = "mist-frozen-mlp"
+representation = "mist-pinned-checkpoint"
+head = "two_layer_mlp"
+status = "planned"
+
+[[experiment]]
+id = "mist-lora-mlp"
+representation = "mist-pinned-checkpoint-plus-lora"
+head = "two_layer_mlp"
+status = "planned"
+
+[[experiment]]
+id = "mist-random-init-mlp"
+representation = "mist-random-initialization"
+head = "two_layer_mlp"
+status = "planned-control"
+
+[[experiment]]
+id = "mist-random-init-lora-mlp"
+representation = "mist-random-initialization-plus-lora"
+head = "two_layer_mlp"
+status = "planned-control"
+
+[[experiment]]
+id = "mist-full-finetune"
+representation = "mist-all-weights-trainable"
+head = "two_layer_mlp"
+status = "future-only"

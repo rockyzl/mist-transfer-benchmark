@@ -1,0 +1,23 @@
+# Documentation/provenance template for the executable synthetic smoke test.
+# The current CLI receives these values as explicit flags so the exact command is visible in logs.
+
+[dataset]
+path = "data/fixtures/redox_tiny_internal.csv"
+contract_version = "1.1"
+scientific_use = false
+
+[split]
+strategy = "scaffold"
+seed = 42
+train_fraction = 0.70
+validation_fraction = 0.15
+test_fraction = 0.15
+
+[representation]
+name = "ecfp"
+radius = 2
+n_bits = 2048
+include_chirality = true
+
+[models]
+names = ["dummy", "tanimoto_1nn", "ridge", "random_forest"]

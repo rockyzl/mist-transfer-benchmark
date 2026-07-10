@@ -1,0 +1,15 @@
+Synthetic fixture data legal notice
+
+The synthetic numeric values and fixture-specific metadata in redox_tiny.csv and
+redox_tiny_internal.csv are dedicated to the public domain under Creative Commons CC0 1.0
+Universal:
+
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The molecular structures are common factual chemical representations and are included only to
+exercise software. No fixture value is copied from, or asserted to reproduce, an experimental or
+computed redox dataset. The fixture carries no scientific validity or fitness warranty.
+
+This notice applies only to files in data/fixtures. Project code and documentation remain under
+the repository's MIT License.
+

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv sync --extra dev --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest --cov=mist_transfer_benchmark --cov-report=term-missing
+      - run: uv build
+      - run: uv run mist-transfer validate data/fixtures/redox_tiny_internal.csv
+      - run: >-
+          uv run mist-transfer run-baseline data/fixtures/redox_tiny_internal.csv
+          --output-dir /tmp/mist-transfer-random
+          --split random
+          --seed 42
+      - run: >-
+          uv run mist-transfer run-baseline data/fixtures/redox_tiny_internal.csv
+          --output-dir /tmp/mist-transfer-scaffold
+          --split scaffold
+          --seed 42
+      - run: >-
+          uv run mist-transfer run-baseline data/fixtures/redox_tiny_internal.csv
+          --output-dir /tmp/mist-transfer-group
+          --split group
+          --group-column chemical_family
+          --seed 42
+      - run: >-
+          uv run mist-transfer run-baseline data/fixtures/redox_tiny.csv
+          --output-dir /tmp/mist-transfer-external
+          --split external
+          --seed 42
