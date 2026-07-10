@@ -27,38 +27,28 @@ representation = "ecfp-radius2-2048"
 head = "random_forest"
 status = "implemented"
 
+# Planned MIST arms attach and train the listed regression head on the same labeled
+# redox training partition; LoRA or encoder updates are additional to that head.
 [[experiment]]
 id = "mist-frozen-linear"
-representation = "mist-pinned-checkpoint"
+representation = "mist-pinned-pretrained-checkpoint"
 head = "linear"
 status = "planned"
 
 [[experiment]]
 id = "mist-frozen-mlp"
-representation = "mist-pinned-checkpoint"
+representation = "mist-pinned-pretrained-checkpoint"
 head = "two_layer_mlp"
 status = "planned"
 
 [[experiment]]
 id = "mist-lora-mlp"
-representation = "mist-pinned-checkpoint-plus-lora"
+representation = "mist-pinned-pretrained-checkpoint-plus-lora"
 head = "two_layer_mlp"
 status = "planned"
 
 [[experiment]]
-id = "mist-random-init-mlp"
-representation = "mist-random-initialization"
-head = "two_layer_mlp"
-status = "planned-control"
-
-[[experiment]]
-id = "mist-random-init-lora-mlp"
-representation = "mist-random-initialization-plus-lora"
-head = "two_layer_mlp"
-status = "planned-control"
-
-[[experiment]]
 id = "mist-full-finetune"
-representation = "mist-all-weights-trainable"
+representation = "mist-pinned-pretrained-checkpoint-all-weights-trainable"
 head = "two_layer_mlp"
 status = "future-only"

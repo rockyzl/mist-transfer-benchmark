@@ -202,7 +202,8 @@ def _run_command(args: argparse.Namespace) -> int:
         "claim_gate": {
             "ready_for_transfer_claim": False,
             "blocking_items": [
-                "MIST and matched random-initialization controls are not implemented",
+                "a pretrained MIST checkpoint with a downstream-trained regression head and "
+                "optional adapter updates is not implemented",
                 "learning curves, repeated-seed aggregation, bootstrap intervals, and "
                 "uncertainty analysis remain planned",
                 "an independently curated external dataset is required",
