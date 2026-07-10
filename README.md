@@ -26,6 +26,26 @@ Random train/test splits often cannot distinguish these explanations. This proje
 the same methods on progressively harder splits and records how similar every held-out molecule
 is to its nearest training molecule.
 
+The benchmark never treats the raw MIST foundation checkpoint as a redox predictor. Each planned
+MIST arm starts from an existing public pretrained checkpoint hosted on Hugging Face, attaches and
+trains a scalar regression head, and uses the same labeled redox training rows as the classical
+models. Depending on the arm, the encoder stays frozen, LoRA/adapter updates are trained alongside
+the regression head, or the full encoder is fine-tuned with that head. The resulting task-specific
+predictor—not the raw checkpoint—is compared with ECFP ridge, random-forest, and nearest-neighbor
+predictors. In a scientific run, all methods are evaluated against the same held-out measured values.
+
+```text
+same labeled redox training rows
+    ├── ECFP → ridge / random forest / nearest neighbor → classical predictor
+    └── pretrained MIST → attach regression head → train head (+ optional LoRA/encoder updates)
+                                                              → MIST predictor
+
+same held-out molecules → both predictors → compare predictions with measured redox values
+```
+
+This is a practical comparison of final task predictors; it is not a comparison between a raw
+foundation model and a trained classical model. MIST execution remains planned, not implemented.
+
 ## Pre-registered hypotheses
 
 - **Transfer hypothesis:** a pretrained molecular encoder should retain an advantage over ECFP
@@ -112,9 +132,9 @@ git diff --exit-code -- site/demo-data.json
 | Stage | Representation and model | Status |
 |---|---|---|
 | A | Mean; ECFP Tanimoto 1-NN; ECFP + ridge/random forest | Implemented |
-| B | Frozen MIST encoder + linear or small MLP head | Planned |
-| C | MIST LoRA + the same task head | Planned |
-| D | Full MIST fine-tuning | Future only; requires a justified data/compute budget |
+| B | Public pretrained MIST encoder (frozen) + label-trained linear or MLP head | Planned |
+| C | Public pretrained MIST + LoRA and regression head, downstream-trained on labels | Planned |
+| D | Public pretrained MIST + full downstream fine-tuning | Future only; requires a justified data/compute budget |
 
 Every stage must use the same immutable row IDs, split assignments, target definition, and
 evaluation metrics. Full details are in [`docs/experiment_matrix.md`](docs/experiment_matrix.md).
@@ -152,10 +172,9 @@ See [`docs/leakage_controls.md`](docs/leakage_controls.md) and
 
 ## Project scope
 
-The emitted machine-readable claim gate remains closed in v0.1.1. MIST comparisons, matched
-random-initialization controls, learning curves, repeated-seed aggregation, bootstrap intervals,
-uncertainty analysis, and an independently curated external dataset are still required before a
-transfer-learning claim.
+The emitted machine-readable claim gate remains closed in v0.1.1. MIST comparisons, learning
+curves, repeated-seed aggregation, bootstrap intervals, uncertainty analysis, and an independently
+curated external dataset are still required before a transfer-learning claim.
 
 This is an independent benchmark, not an official MIST project and not affiliated with the
 MIST authors. MIST is developed in the

@@ -233,6 +233,12 @@
             A random split asks whether a model can interpolate. Harder splits ask whether useful
             structure survives when familiar scaffolds, families, or sources disappear.
           </p>
+          <p>
+            We never compare a raw foundation checkpoint with a trained model. The planned MIST arm
+            starts from an existing pretrained checkpoint, then attaches and trains a regression head
+            on the same labeled redox rows as the ECFP models. Optional LoRA updates are trained
+            alongside that head. Both final predictors are compared on the same held-out measurements.
+          </p>
         </div>
         <div class="method-cards">
           <article>
@@ -248,7 +254,7 @@
           <article>
             <span class="method-number">03</span>
             <h3>Earn the claim</h3>
-            <p>Compare pretrained and random-init MIST against strong baselines on real, licensed data.</p>
+            <p>Compare the downstream-trained MIST predictor with label-trained classical baselines.</p>
           </article>
         </div>
       </section>
@@ -258,8 +264,8 @@
           <p class="eyebrow">Current scientific status</p>
           <h2 id="status-title">The claim gate is closed.</h2>
           <p>
-            Real redox data, matched MIST controls, learning curves, repeated seeds, uncertainty,
-            and an independently curated external set are still required.
+            Real redox data, a pretrained-MIST predictor with downstream training, learning curves,
+            repeated seeds, uncertainty, and an independently curated external set are still required.
           </p>
         </div>
         <div class="status-links">
