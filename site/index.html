@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="A synthetic-data software demo for exploring leakage-aware molecular benchmark splits."
+    >
+    <title>MIST Transfer Benchmark — synthetic software demo</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#explorer">Skip to benchmark explorer</a>
+
+    <div class="status-bar" role="note" aria-label="Scientific status">
+      <span class="status-dot" aria-hidden="true"></span>
+      Synthetic data · software demo only · MIST is not executed · no scientific result
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="MIST Transfer Benchmark home">
+        <svg class="brand-mark" viewBox="0 0 44 44" aria-hidden="true">
+          <path d="M11 12 22 6l11 6v13L22 38l-11-6Z"/>
+          <circle cx="11" cy="12" r="4"/>
+          <circle cx="33" cy="12" r="4"/>
+          <circle cx="22" cy="38" r="4"/>
+        </svg>
+        <span>MIST <strong>Transfer Benchmark</strong></span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#explorer">Explorer</a>
+        <a href="#method">Method</a>
+        <a href="https://github.com/rockyzl/mist-transfer-benchmark">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span>Open benchmark</span> · redox potential regression</p>
+          <h1 id="hero-title">Transfer—or expensive similarity?</h1>
+          <p class="hero-lede">
+            Explore how molecular train/test splits change what a model appears to know.
+            The benchmark is designed to ask whether pretrained representations transfer
+            beyond nearby chemical structures.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#explorer">Explore the software demo</a>
+            <a class="button button-secondary" href="https://github.com/BattModels/mist-demo">
+              Official MIST notebooks <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+          <p class="hero-caveat">
+            This page visualizes deterministic outputs from tiny, invented fixture values.
+            It does not run MIST, contains no scientific result, and cannot support a model-quality
+            or chemistry claim.
+          </p>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <svg viewBox="0 0 560 440">
+            <defs>
+              <linearGradient id="orb" x1="0" y1="0" x2="1" y2="1">
+                <stop stop-color="#61e4c5"/>
+                <stop offset="1" stop-color="#c9ff65"/>
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="12"/>
+              </filter>
+            </defs>
+            <circle class="glow" cx="300" cy="215" r="142" fill="url(#orb)" filter="url(#glow)"/>
+            <g class="orbit-lines">
+              <ellipse cx="300" cy="215" rx="185" ry="86" transform="rotate(-19 300 215)"/>
+              <ellipse cx="300" cy="215" rx="185" ry="86" transform="rotate(47 300 215)"/>
+              <ellipse cx="300" cy="215" rx="185" ry="86" transform="rotate(102 300 215)"/>
+            </g>
+            <g class="molecule-lines">
+              <path d="m244 156 56-33 56 33v65l-56 33-56-33Z"/>
+              <path d="m300 254 0 67 61 35M244 221l-58 34M356 156l56-34"/>
+            </g>
+            <g fill="url(#orb)">
+              <circle cx="244" cy="156" r="12"/><circle cx="300" cy="123" r="12"/>
+              <circle cx="356" cy="156" r="12"/><circle cx="356" cy="221" r="12"/>
+              <circle cx="300" cy="254" r="14"/><circle cx="244" cy="221" r="12"/>
+              <circle cx="300" cy="321" r="10"/><circle cx="361" cy="356" r="10"/>
+              <circle cx="186" cy="255" r="10"/><circle cx="412" cy="122" r="10"/>
+            </g>
+            <g class="data-pills">
+              <rect x="47" y="74" width="146" height="44" rx="22"/>
+              <rect x="370" y="282" width="148" height="44" rx="22"/>
+            </g>
+            <g class="data-labels">
+              <text x="120" y="101">SPLIT ≠ RANDOM</text>
+              <text x="444" y="309">SIMILARITY ↓</text>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section class="explorer-shell" id="explorer" aria-labelledby="explorer-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Interactive benchmark explorer</p>
+            <h2 id="explorer-title">Change the test, change the story.</h2>
+          </div>
+          <div class="demo-stamp">
+            <span>DEMO</span>
+            synthetic software output
+          </div>
+        </div>
+
+        <div class="explorer-grid">
+          <aside class="controls" aria-label="Explorer controls">
+            <div class="control-group">
+              <label for="split-select">Holdout strategy</label>
+              <select id="split-select" name="split">
+                <option value="random">Grouped random</option>
+                <option value="scaffold" selected>Scaffold holdout</option>
+                <option value="family">Chemical-family holdout</option>
+                <option value="external">External-source holdout</option>
+              </select>
+              <p id="split-description" class="control-help"></p>
+            </div>
+
+            <div class="control-group">
+              <label for="model-select">Baseline model</label>
+              <select id="model-select" name="model">
+                <option value="dummy">Mean baseline</option>
+                <option value="tanimoto_1nn">Tanimoto 1-NN</option>
+                <option value="ridge" selected>ECFP + ridge</option>
+                <option value="random_forest">ECFP + random forest</option>
+              </select>
+              <p class="control-help">All four methods use the same synthetic fixture and split.</p>
+            </div>
+
+            <div class="split-counts" aria-labelledby="split-count-title">
+              <h3 id="split-count-title">Split composition</h3>
+              <div class="count-row"><span>Train</span><strong id="count-train">—</strong></div>
+              <div class="count-row"><span>Validation</span><strong id="count-validation">—</strong></div>
+              <div class="count-row"><span>Test</span><strong id="count-test">—</strong></div>
+              <div class="count-bar" aria-hidden="true">
+                <span class="train"></span><span class="validation"></span><span class="test"></span>
+              </div>
+            </div>
+
+            <div class="similarity-note">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="9" cy="9" r="5"/><path d="m13 13 7 7M9 6v6M6 9h6"/>
+              </svg>
+              <div>
+                <strong>Nearest-train similarity</strong>
+                <p>
+                  For each test molecule, this is its largest ECFP Tanimoto similarity to any
+                  training molecule. Lower values mean less structural interpolation.
+                </p>
+              </div>
+            </div>
+          </aside>
+
+          <div class="results-panel" aria-live="polite" aria-busy="true">
+            <div class="results-header">
+              <div>
+                <p class="results-kicker">Synthetic software-demo outputs</p>
+                <h3 id="result-title">Loading fixture…</h3>
+              </div>
+              <div class="view-toggle" role="group" aria-label="Chart view">
+                <button type="button" data-view="prediction" aria-pressed="true">Prediction</button>
+                <button type="button" data-view="similarity" aria-pressed="false">Similarity</button>
+              </div>
+            </div>
+
+            <div class="metric-grid" aria-label="Test-set software-demo metrics">
+              <article class="metric-card">
+                <span>MAE</span><strong id="metric-mae">—</strong><small>volts · test</small>
+              </article>
+              <article class="metric-card">
+                <span>RMSE</span><strong id="metric-rmse">—</strong><small>volts · test</small>
+              </article>
+              <article class="metric-card">
+                <span>R²</span><strong id="metric-r2">—</strong><small>descriptive only</small>
+              </article>
+              <article class="metric-card accent">
+                <span>Median similarity</span><strong id="metric-similarity">—</strong><small>ECFP Tanimoto</small>
+              </article>
+            </div>
+
+            <figure class="chart-card">
+              <figcaption>
+                <strong id="chart-title">Predicted vs. synthetic target</strong>
+                <span id="chart-subtitle">Test-set rows only</span>
+              </figcaption>
+              <div id="chart-wrap" class="chart-wrap">
+                <svg id="result-chart" viewBox="0 0 760 390" role="img" aria-labelledby="chart-title chart-subtitle"></svg>
+              </div>
+              <div class="chart-legend">
+                <span><i class="dot"></i> synthetic test row</span>
+                <span id="line-legend"><i class="line"></i> ideal prediction</span>
+              </div>
+            </figure>
+
+            <div class="table-wrap">
+              <table>
+                <caption>Test-row details for the selected synthetic run</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Fixture ID</th>
+                    <th scope="col">Family</th>
+                    <th scope="col">Target (V)</th>
+                    <th scope="col">Prediction (V)</th>
+                    <th scope="col">Abs. error (V)</th>
+                    <th scope="col">Nearest similarity</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-rows"></tbody>
+              </table>
+            </div>
+
+            <p class="results-disclaimer">
+              Do not rank models from these numbers. The tiny targets are invented, sample sizes
+              are intentionally inadequate, and MIST is absent. This view verifies the interface,
+              split logic, provenance, and reporting path only.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="method-section" id="method" aria-labelledby="method-title">
+        <div class="method-intro">
+          <p class="eyebrow">How to read the benchmark</p>
+          <h2 id="method-title">A result is only as honest as its holdout.</h2>
+          <p>
+            A random split asks whether a model can interpolate. Harder splits ask whether useful
+            structure survives when familiar scaffolds, families, or sources disappear.
+          </p>
+        </div>
+        <div class="method-cards">
+          <article>
+            <span class="method-number">01</span>
+            <h3>Freeze the question</h3>
+            <p>Use one target definition, one condition cohort, and immutable molecule identities.</p>
+          </article>
+          <article>
+            <span class="method-number">02</span>
+            <h3>Stress the split</h3>
+            <p>Move whole molecular groups, then audit nearest-training similarity for every test row.</p>
+          </article>
+          <article>
+            <span class="method-number">03</span>
+            <h3>Earn the claim</h3>
+            <p>Compare pretrained and random-init MIST against strong baselines on real, licensed data.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="status-section" aria-labelledby="status-title">
+        <div>
+          <p class="eyebrow">Current scientific status</p>
+          <h2 id="status-title">The claim gate is closed.</h2>
+          <p>
+            Real redox data, matched MIST controls, learning curves, repeated seeds, uncertainty,
+            and an independently curated external set are still required.
+          </p>
+        </div>
+        <div class="status-links">
+          <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/experiment_matrix.md">
+            Experiment matrix <span aria-hidden="true">→</span>
+          </a>
+          <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/leakage_controls.md">
+            Leakage controls <span aria-hidden="true">→</span>
+          </a>
+          <a href="https://github.com/BattModels/mist-demo">
+            Official MIST demo <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>
+        <strong>MIST Transfer Benchmark</strong>
+        <p>Independent, open, and not affiliated with the MIST authors.</p>
+      </div>
+      <p id="provenance">Loading deterministic provenance…</p>
+      <p class="footer-warning">Synthetic software demo · no MIST execution · no scientific result</p>
+    </footer>
+
+    <noscript>
+      <p class="noscript">JavaScript is required to render the interactive synthetic fixture.</p>
+    </noscript>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
