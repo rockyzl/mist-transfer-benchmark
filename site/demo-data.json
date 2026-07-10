@@ -1,0 +1,454 @@
+{
+  "model_labels": {
+    "dummy": "Mean baseline",
+    "random_forest": "ECFP + random forest",
+    "ridge": "ECFP + ridge",
+    "tanimoto_1nn": "Tanimoto 1-NN"
+  },
+  "notice": "All values are synthetic. These outputs test software behavior only and are not scientific benchmark results. MIST is not executed.",
+  "provenance": {
+    "benchmark_version": "0.1.1",
+    "demo_run_id": "4225627e149e6fac2ccfa4b0c33fd625a63080c42f0021036543415059e5859b",
+    "fingerprint": {
+      "include_chirality": true,
+      "kind": "ECFP",
+      "n_bits": 2048,
+      "radius": 2
+    },
+    "fixtures_sha256": {
+      "data/fixtures/redox_tiny.csv": "73f940cfcfcabdb7bf0f53ec11838f2b70f232fe92bded00167b4ba50cc8f1a8",
+      "data/fixtures/redox_tiny_internal.csv": "eac6edfb4eb7732326385bf1276d29acc0e436b84b4dd6a4b67716ebd2e712c1"
+    },
+    "seed": 42
+  },
+  "schema_version": 1,
+  "scientific_status": "synthetic-software-demo-only",
+  "splits": {
+    "external": {
+      "counts": {
+        "test": 4,
+        "train": 16,
+        "validation": 4
+      },
+      "description": "Rows marked as a separate synthetic source are test-only.",
+      "fixture": "data/fixtures/redox_tiny.csv",
+      "models": {
+        "dummy": {
+          "metrics": {
+            "mae": 0.3475,
+            "median_ae": 0.3625,
+            "n": 4,
+            "r2": -10.211945,
+            "rmse": 0.364117,
+            "spearman": null
+          },
+          "predictions_v": [
+            -1.3825,
+            -1.3825,
+            -1.3825,
+            -1.3825
+          ]
+        },
+        "random_forest": {
+          "metrics": {
+            "mae": 0.307266,
+            "median_ae": 0.329648,
+            "n": 4,
+            "r2": -7.749806,
+            "rmse": 0.321662,
+            "spearman": 0.8
+          },
+          "predictions_v": [
+            -1.374766,
+            -1.348828,
+            -1.324531,
+            -1.320938
+          ]
+        },
+        "ridge": {
+          "metrics": {
+            "mae": 0.238027,
+            "median_ae": 0.248017,
+            "n": 4,
+            "r2": -4.033127,
+            "rmse": 0.24396,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.296033,
+            -1.350975,
+            -1.240002,
+            -1.205098
+          ]
+        },
+        "tanimoto_1nn": {
+          "metrics": {
+            "mae": 0.1,
+            "median_ae": 0.115,
+            "n": 4,
+            "r2": -0.052854,
+            "rmse": 0.11158,
+            "spearman": 0.774597
+          },
+          "predictions_v": [
+            -1.06,
+            -1.32,
+            -1.06,
+            -1.06
+          ]
+        }
+      },
+      "records": [
+        {
+          "family": "imidazole",
+          "max_train_tanimoto": 0.181818,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-021",
+          "target_v": -1.08
+        },
+        {
+          "family": "imidazole",
+          "max_train_tanimoto": 0.26087,
+          "nearest_train_record_id": "syn-008",
+          "record_id": "syn-022",
+          "target_v": -1.19
+        },
+        {
+          "family": "imidazole",
+          "max_train_tanimoto": 0.26087,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-023",
+          "target_v": -0.96
+        },
+        {
+          "family": "imidazole",
+          "max_train_tanimoto": 0.16,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-024",
+          "target_v": -0.91
+        }
+      ],
+      "test_similarity": {
+        "max": 0.26087,
+        "median": 0.221344,
+        "min": 0.16,
+        "n": 4
+      },
+      "title": "External-source holdout"
+    },
+    "family": {
+      "counts": {
+        "test": 4,
+        "train": 4,
+        "validation": 4
+      },
+      "description": "Entire synthetic chemical-family labels are held out together.",
+      "fixture": "data/fixtures/redox_tiny_internal.csv",
+      "models": {
+        "dummy": {
+          "metrics": {
+            "mae": 0.3225,
+            "median_ae": 0.3075,
+            "n": 4,
+            "r2": -8.093872,
+            "rmse": 0.341842,
+            "spearman": null
+          },
+          "predictions_v": [
+            -1.1475,
+            -1.1475,
+            -1.1475,
+            -1.1475
+          ]
+        },
+        "random_forest": {
+          "metrics": {
+            "mae": 0.324082,
+            "median_ae": 0.319687,
+            "n": 4,
+            "r2": -7.634979,
+            "rmse": 0.333106,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.14625,
+            -1.207187,
+            -1.124375,
+            -1.105859
+          ]
+        },
+        "ridge": {
+          "metrics": {
+            "mae": 0.31725,
+            "median_ae": 0.318,
+            "n": 4,
+            "r2": -7.085156,
+            "rmse": 0.322326,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.158,
+            -1.246,
+            -1.116,
+            -1.091
+          ]
+        },
+        "tanimoto_1nn": {
+          "metrics": {
+            "mae": 0.37,
+            "median_ae": 0.33,
+            "n": 4,
+            "r2": -10.167315,
+            "rmse": 0.378814,
+            "spearman": 0.632456
+          },
+          "predictions_v": [
+            -1.01,
+            -1.32,
+            -1.06,
+            -1.01
+          ]
+        }
+      },
+      "records": [
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.166667,
+          "nearest_train_record_id": "syn-006",
+          "record_id": "syn-009",
+          "target_v": -1.52
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-008",
+          "record_id": "syn-010",
+          "target_v": -1.63
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-011",
+          "target_v": -1.39
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-006",
+          "record_id": "syn-012",
+          "target_v": -1.34
+        }
+      ],
+      "test_similarity": {
+        "max": 0.25,
+        "median": 0.25,
+        "min": 0.166667,
+        "n": 4
+      },
+      "title": "Chemical-family holdout"
+    },
+    "random": {
+      "counts": {
+        "test": 2,
+        "train": 8,
+        "validation": 2
+      },
+      "description": "Molecular identities stay together, but related families may span partitions.",
+      "fixture": "data/fixtures/redox_tiny_internal.csv",
+      "models": {
+        "dummy": {
+          "metrics": {
+            "mae": 0.19,
+            "median_ae": 0.19,
+            "n": 2,
+            "r2": -0.848338,
+            "rmse": 0.258312,
+            "spearman": null
+          },
+          "predictions_v": [
+            -1.025,
+            -1.025
+          ]
+        },
+        "random_forest": {
+          "metrics": {
+            "mae": 0.132617,
+            "median_ae": 0.132617,
+            "n": 2,
+            "r2": 0.502874,
+            "rmse": 0.133964,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.123672,
+            -1.238437
+          ]
+        },
+        "ridge": {
+          "metrics": {
+            "mae": 0.086491,
+            "median_ae": 0.086491,
+            "n": 2,
+            "r2": 0.79277,
+            "rmse": 0.086493,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.095873,
+            -1.302892
+          ]
+        },
+        "tanimoto_1nn": {
+          "metrics": {
+            "mae": 0.145,
+            "median_ae": 0.145,
+            "n": 2,
+            "r2": 0.16759,
+            "rmse": 0.173349,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.06,
+            -1.63
+          ]
+        }
+      },
+      "records": [
+        {
+          "family": "pyridine",
+          "max_train_tanimoto": 0.444444,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-006",
+          "target_v": -1.01
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.478261,
+          "nearest_train_record_id": "syn-010",
+          "record_id": "syn-011",
+          "target_v": -1.39
+        }
+      ],
+      "test_similarity": {
+        "max": 0.478261,
+        "median": 0.461353,
+        "min": 0.444444,
+        "n": 2
+      },
+      "title": "Grouped random"
+    },
+    "scaffold": {
+      "counts": {
+        "test": 4,
+        "train": 4,
+        "validation": 4
+      },
+      "description": "Bemis\u2013Murcko scaffold groups move as indivisible units.",
+      "fixture": "data/fixtures/redox_tiny_internal.csv",
+      "models": {
+        "dummy": {
+          "metrics": {
+            "mae": 0.3225,
+            "median_ae": 0.3075,
+            "n": 4,
+            "r2": -8.093872,
+            "rmse": 0.341842,
+            "spearman": null
+          },
+          "predictions_v": [
+            -1.1475,
+            -1.1475,
+            -1.1475,
+            -1.1475
+          ]
+        },
+        "random_forest": {
+          "metrics": {
+            "mae": 0.324082,
+            "median_ae": 0.319687,
+            "n": 4,
+            "r2": -7.634979,
+            "rmse": 0.333106,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.14625,
+            -1.207187,
+            -1.124375,
+            -1.105859
+          ]
+        },
+        "ridge": {
+          "metrics": {
+            "mae": 0.31725,
+            "median_ae": 0.318,
+            "n": 4,
+            "r2": -7.085156,
+            "rmse": 0.322326,
+            "spearman": 1.0
+          },
+          "predictions_v": [
+            -1.158,
+            -1.246,
+            -1.116,
+            -1.091
+          ]
+        },
+        "tanimoto_1nn": {
+          "metrics": {
+            "mae": 0.37,
+            "median_ae": 0.33,
+            "n": 4,
+            "r2": -10.167315,
+            "rmse": 0.378814,
+            "spearman": 0.632456
+          },
+          "predictions_v": [
+            -1.01,
+            -1.32,
+            -1.06,
+            -1.01
+          ]
+        }
+      },
+      "records": [
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.166667,
+          "nearest_train_record_id": "syn-006",
+          "record_id": "syn-009",
+          "target_v": -1.52
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-008",
+          "record_id": "syn-010",
+          "target_v": -1.63
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-007",
+          "record_id": "syn-011",
+          "target_v": -1.39
+        },
+        {
+          "family": "naphthalene",
+          "max_train_tanimoto": 0.25,
+          "nearest_train_record_id": "syn-006",
+          "record_id": "syn-012",
+          "target_v": -1.34
+        }
+      ],
+      "test_similarity": {
+        "max": 0.25,
+        "median": 0.25,
+        "min": 0.166667,
+        "n": 4
+      },
+      "title": "Scaffold holdout"
+    }
+  }
+}

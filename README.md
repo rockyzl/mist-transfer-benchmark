@@ -1,5 +1,11 @@
 # MIST Transfer Benchmark
 
+[**Live benchmark explorer**](https://rockyzl.github.io/mist-transfer-benchmark/)
+· [**Official MIST notebooks**](https://github.com/BattModels/mist-demo)
+
+> **Demo status:** The live explorer uses tiny, synthetic fixture values to demonstrate the
+> software and split logic. It does not execute MIST and contains no scientific benchmark result.
+
 > Does large-scale SMILES pretraining learn chemistry that transfers to new molecular
 > families, or does it mainly provide an expensive way to encode molecular similarity?
 
@@ -43,6 +49,7 @@ These are hypotheses, not results. This repository contains no scientific benchm
   and computation/measurement protocols before molecular-only fitting;
 - leakage checks and nearest-training-molecule Tanimoto diagnostics;
 - machine-readable run metadata, split assignments, predictions, and metrics;
+- a static, accessible benchmark explorer for comparing split behavior on synthetic fixtures;
 - a synthetic fixture for testing the software only.
 
 MIST execution is intentionally not implemented here yet. No MIST weights are downloaded or
@@ -91,6 +98,14 @@ immutable internal-only CSV before using those strategies.
 The fixture values are synthetic and deliberately have no scientific meaning. A successful run
 proves only that the pipeline works. See [`data/fixtures/NOTICE`](data/fixtures/NOTICE) for its CC0
 legal notice.
+
+The [live benchmark explorer](https://rockyzl.github.io/mist-transfer-benchmark/) visualizes the
+same software-only outputs without requiring a local install. Its committed data are reproducible:
+
+```bash
+uv run python scripts/build_demo_data.py
+git diff --exit-code -- site/demo-data.json
+```
 
 ## Experiment ladder
 

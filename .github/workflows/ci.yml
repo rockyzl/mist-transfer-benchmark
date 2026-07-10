@@ -22,6 +22,7 @@ jobs:
           enable-cache: true
       - run: uv sync --extra dev --frozen
       - run: uv run ruff check .
+      - run: node --check site/app.js
       - run: uv run pytest --cov=mist_transfer_benchmark --cov-report=term-missing
       - run: uv build
       - run: uv run mist-transfer validate data/fixtures/redox_tiny_internal.csv
