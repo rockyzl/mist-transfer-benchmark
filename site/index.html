@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="A synthetic-data software demo for exploring leakage-aware molecular benchmark splits."
+      content="Preliminary aggregate QM9-28M results and a separate synthetic redox benchmark explorer."
     >
-    <title>MIST Transfer Benchmark — synthetic software demo</title>
+    <title>MIST Transfer Benchmark — QM9 results and redox explorer</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
-    <a class="skip-link" href="#explorer">Skip to benchmark explorer</a>
+    <a class="skip-link" href="#qm9-results">Skip to QM9 results</a>
 
     <div class="status-bar" role="note" aria-label="Scientific status">
       <span class="status-dot" aria-hidden="true"></span>
-      Synthetic data · software demo only · MIST is not executed · no scientific result
+      Preliminary local QM9 point estimates · candidate split · redox explorer is synthetic
     </div>
 
     <header class="site-header">
@@ -29,7 +29,8 @@
         <span>MIST <strong>Transfer Benchmark</strong></span>
       </a>
       <nav aria-label="Primary navigation">
-        <a href="#explorer">Explorer</a>
+        <a href="#qm9-results">QM9 results</a>
+        <a href="#explorer">Redox demo</a>
         <a href="#method">Method</a>
         <a href="https://github.com/rockyzl/mist-transfer-benchmark">GitHub</a>
       </nav>
@@ -38,23 +39,24 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span>Open benchmark</span> · redox potential regression</p>
+          <p class="eyebrow"><span>Open benchmark</span> · molecular property transfer</p>
           <h1 id="hero-title">Transfer—or expensive similarity?</h1>
           <p class="hero-lede">
-            Explore how molecular train/test splits change what a model appears to know.
-            The benchmark is designed to ask whether pretrained representations transfer
-            beyond nearby chemical structures.
+            Read the first aggregate QM9 comparison, then explore why molecular train/test
+            splits change what a model appears to know. The longer-term question is whether
+            pretrained representations transfer beyond nearby chemical structures.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#explorer">Explore the software demo</a>
+            <a class="button button-primary" href="#qm9-results">See the QM9 result</a>
+            <a class="button button-secondary" href="#explorer">Explore the redox demo</a>
             <a class="button button-secondary" href="https://github.com/BattModels/mist-demo">
               Official MIST notebooks <span aria-hidden="true">↗</span>
             </a>
           </div>
           <p class="hero-caveat">
-            This page visualizes deterministic outputs from tiny, invented fixture values.
-            It does not run MIST, contains no scientific result, and cannot support a model-quality
-            or chemistry claim.
+            This static page does not run inference. The QM9 section reads a tracked,
+            aggregate-only result from one completed local run; its split and uncertainty caveats
+            remain open. The redox explorer uses tiny, invented fixture values only.
           </p>
         </div>
 
@@ -98,10 +100,117 @@
         </div>
       </section>
 
+      <section class="qm9-section" id="qm9-results" aria-labelledby="qm9-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">QM9-28M · preliminary local result</p>
+            <h2 id="qm9-title">Lower error on this candidate split.</h2>
+          </div>
+          <div class="result-stamp">
+            <span>AGGREGATE ONLY</span>
+            no rows, labels, predictions, or weights
+          </div>
+        </div>
+
+        <p class="qm9-lede">
+          The released, already fine-tuned MIST-28M predictor had lower error than the locked
+          ECFP4 Ridge baseline on all 12 QM9 targets. This comparison uses DFT-computed labels and
+          a split reconstructed from public code; it is not an official checkpoint reproduction
+          or a causal test of pretraining.
+        </p>
+
+        <div class="cohort-toggle" role="group" aria-label="QM9 test cohort">
+          <button type="button" data-qm9-cohort="full_test" aria-pressed="true" disabled>
+            Complete test · 13,389
+          </button>
+          <button type="button" data-qm9-cohort="duplicate_clean_test" aria-pressed="false" disabled>
+            Duplicate-clean · 13,370
+          </button>
+        </div>
+
+        <div id="qm9-results-panel" class="qm9-results-panel" aria-live="polite" aria-busy="true">
+          <div class="qm9-metric-grid" aria-label="QM9 aggregate test metrics">
+            <article class="qm9-metric-card primary">
+              <span>Released MIST</span>
+              <strong id="qm9-aggregate-mist">—</strong>
+              <small>mean normalized MAE</small>
+            </article>
+            <article class="qm9-metric-card">
+              <span>Locked ECFP Ridge</span>
+              <strong id="qm9-aggregate-ridge">—</strong>
+              <small>mean normalized MAE</small>
+            </article>
+            <article class="qm9-metric-card accent">
+              <span>Error reduction</span>
+              <strong id="qm9-aggregate-reduction">—</strong>
+              <small>relative to Ridge</small>
+            </article>
+            <article class="qm9-metric-card">
+              <span>Selected cohort</span>
+              <strong id="qm9-cohort-rows">—</strong>
+              <small id="qm9-cohort-label">test rows</small>
+            </article>
+          </div>
+
+          <div class="qm9-detail-grid">
+            <figure class="qm9-chart-card">
+              <figcaption>
+                <strong>HOMO, LUMO, and gap MAE</strong>
+                <span>Shorter is better · one shared hartree scale</span>
+              </figcaption>
+              <div id="qm9-highlight-bars" class="qm9-bars" role="img" aria-label="Loading highlighted QM9 target errors"></div>
+              <div class="qm9-bar-legend" aria-hidden="true">
+                <span><i class="mist"></i> Released MIST</span>
+                <span><i class="ridge"></i> Locked Ridge</span>
+              </div>
+            </figure>
+
+            <aside class="qm9-claim-boundary" aria-labelledby="qm9-boundary-title">
+              <p class="results-kicker">Claim boundary</p>
+              <h3 id="qm9-boundary-title">What this result does—and does not—show</h3>
+              <ul>
+                <li>One released task-specific MIST checkpoint, inference only; no retraining.</li>
+                <li>Ridge was selected on validation and locked before MIST test inference.</li>
+                <li>Random forest remains validation-only and has no test score.</li>
+                <li>No uncertainty interval, harder holdout, or pretraining ablation yet.</li>
+              </ul>
+              <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/qm9_28m_results.md">
+                Read the complete result report <span aria-hidden="true">→</span>
+              </a>
+            </aside>
+          </div>
+
+          <div class="qm9-table-wrap">
+            <table>
+              <caption>All 12 targets for the selected cohort</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Target</th>
+                  <th scope="col">Unit</th>
+                  <th scope="col">MIST MAE</th>
+                  <th scope="col">Ridge MAE</th>
+                  <th scope="col">MAE reduction</th>
+                  <th scope="col">MIST R²</th>
+                  <th scope="col">Ridge R²</th>
+                </tr>
+              </thead>
+              <tbody id="qm9-target-rows"></tbody>
+            </table>
+          </div>
+
+          <p class="qm9-footnote">
+            Mean normalized MAE averages each target's MAE divided by its training-set standard
+            deviation. Positive reduction values favor MIST. Values are descriptive point
+            estimates; the tracked JSON retains full precision.
+          </p>
+          <p id="qm9-provenance" class="qm9-provenance">Loading authenticated aggregate provenance…</p>
+        </div>
+      </section>
+
       <section class="explorer-shell" id="explorer" aria-labelledby="explorer-title">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Interactive benchmark explorer</p>
+            <p class="eyebrow">Separate synthetic redox track</p>
             <h2 id="explorer-title">Change the test, change the story.</h2>
           </div>
           <div class="demo-stamp">
@@ -262,15 +371,20 @@
       <section class="status-section" aria-labelledby="status-title">
         <div>
           <p class="eyebrow">Current scientific status</p>
-          <h2 id="status-title">The claim gate is closed.</h2>
+          <h2 id="status-title">One result, not the final answer.</h2>
           <p>
-            Real redox data, a pretrained-MIST predictor with downstream training, learning curves,
-            repeated seeds, uncertainty, and an independently curated external set are still required.
+            The preliminary QM9 predictor comparison is complete. The broader transfer claim gate
+            remains closed: real redox data, downstream MIST training, harder holdouts, learning
+            curves, repeated seeds, uncertainty, and an independently curated external set are
+            still required.
           </p>
         </div>
         <div class="status-links">
           <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/experiment_matrix.md">
             Experiment matrix <span aria-hidden="true">→</span>
+          </a>
+          <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/qm9_28m_results.md">
+            QM9 result report <span aria-hidden="true">→</span>
           </a>
           <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/leakage_controls.md">
             Leakage controls <span aria-hidden="true">→</span>
@@ -288,11 +402,13 @@
         <p>Independent, open, and not affiliated with the MIST authors.</p>
       </div>
       <p id="provenance">Loading deterministic provenance…</p>
-      <p class="footer-warning">Synthetic software demo · no MIST execution · no scientific result</p>
+      <p class="footer-warning">
+        QM9: preliminary aggregate point estimates · redox: synthetic software demo only
+      </p>
     </footer>
 
     <noscript>
-      <p class="noscript">JavaScript is required to render the interactive synthetic fixture.</p>
+      <p class="noscript">JavaScript is required to render the aggregate result and synthetic explorer.</p>
     </noscript>
     <script src="./app.js" defer></script>
   </body>

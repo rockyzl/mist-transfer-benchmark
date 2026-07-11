@@ -3,12 +3,24 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const state = {
   data: null,
+  qm9: null,
+  qm9Cohort: "full_test",
   split: "scaffold",
   model: "ridge",
   view: "prediction",
 };
 
 const elements = {
+  qm9Panel: document.querySelector("#qm9-results-panel"),
+  qm9AggregateMist: document.querySelector("#qm9-aggregate-mist"),
+  qm9AggregateRidge: document.querySelector("#qm9-aggregate-ridge"),
+  qm9AggregateReduction: document.querySelector("#qm9-aggregate-reduction"),
+  qm9CohortRows: document.querySelector("#qm9-cohort-rows"),
+  qm9CohortLabel: document.querySelector("#qm9-cohort-label"),
+  qm9HighlightBars: document.querySelector("#qm9-highlight-bars"),
+  qm9TargetRows: document.querySelector("#qm9-target-rows"),
+  qm9Provenance: document.querySelector("#qm9-provenance"),
+  qm9CohortButtons: [...document.querySelectorAll("[data-qm9-cohort]")],
   resultsPanel: document.querySelector(".results-panel"),
   splitSelect: document.querySelector("#split-select"),
   modelSelect: document.querySelector("#model-select"),
@@ -75,6 +87,164 @@ function validatePayload(data) {
       }
     }
   }
+}
+
+function validateQm9Payload(data) {
+  const cohorts = ["full_test", "duplicate_clean_test"];
+  if (
+    !data ||
+    data.schema_version !== 1 ||
+    data.scientific_status !== "preliminary-local-point-estimates" ||
+    data.artifact_scope !== "aggregate-only-no-row-level-data" ||
+    !Array.isArray(data.target_order) ||
+    data.target_order.length !== 12
+  ) {
+    throw new Error("unexpected QM9 result status or schema");
+  }
+  for (const cohortName of cohorts) {
+    const cohort = data.cohorts?.[cohortName];
+    if (!cohort || !Number.isInteger(cohort.rows) || !cohort.aggregate) {
+      throw new Error(`missing QM9 cohort: ${cohortName}`);
+    }
+    for (const target of data.target_order) {
+      const result = cohort.targets?.[target];
+      if (
+        !result ||
+        !Number.isFinite(result.mist?.mae) ||
+        !Number.isFinite(result.ridge?.mae) ||
+        !Number.isFinite(result.mae_percent_reduction_vs_ridge)
+      ) {
+        throw new Error(`missing QM9 target metric: ${cohortName}/${target}`);
+      }
+    }
+  }
+}
+
+function formatQm9Metric(value) {
+  const absolute = Math.abs(value);
+  if (absolute >= 100) return value.toFixed(1);
+  if (absolute >= 10) return value.toFixed(2);
+  if (absolute >= 1) return value.toFixed(3);
+  if (absolute >= 0.1) return value.toFixed(4);
+  if (absolute >= 0.01) return value.toFixed(5);
+  return value.toFixed(6);
+}
+
+function qm9CohortLabel(cohortName) {
+  return cohortName === "full_test" ? "complete candidate test" : "duplicate-clean test";
+}
+
+function renderQm9Bars(cohort) {
+  const targets = state.qm9.highlighted_targets;
+  const maximum = Math.max(
+    ...targets.flatMap((target) => [
+      cohort.targets[target].mist.mae,
+      cohort.targets[target].ridge.mae,
+    ]),
+  );
+  const fragment = document.createDocumentFragment();
+  const accessibleSummary = [];
+
+  for (const target of targets) {
+    const result = cohort.targets[target];
+    const group = document.createElement("div");
+    group.className = "qm9-bar-group";
+
+    const header = document.createElement("div");
+    header.className = "qm9-bar-header";
+    const name = document.createElement("strong");
+    name.textContent = target.toUpperCase();
+    const reduction = document.createElement("span");
+    reduction.textContent = `${result.mae_percent_reduction_vs_ridge.toFixed(2)}% lower MAE`;
+    header.append(name, reduction);
+    group.append(header);
+
+    for (const [label, key] of [
+      ["MIST", "mist"],
+      ["Ridge", "ridge"],
+    ]) {
+      const value = result[key].mae;
+      const row = document.createElement("div");
+      row.className = "qm9-bar-row";
+      const model = document.createElement("span");
+      model.textContent = label;
+      const track = document.createElement("span");
+      track.className = "qm9-bar-track";
+      track.setAttribute("aria-hidden", "true");
+      const bar = document.createElement("i");
+      bar.className = `qm9-bar qm9-bar-${key}`;
+      bar.style.width = `${Math.max((100 * value) / maximum, 1)}%`;
+      track.append(bar);
+      const number = document.createElement("strong");
+      number.textContent = formatQm9Metric(value);
+      row.append(model, track, number);
+      group.append(row);
+    }
+    accessibleSummary.push(
+      `${target.toUpperCase()}: MIST ${formatQm9Metric(result.mist.mae)}, ` +
+        `Ridge ${formatQm9Metric(result.ridge.mae)}`,
+    );
+    fragment.append(group);
+  }
+  elements.qm9HighlightBars.replaceChildren(fragment);
+  elements.qm9HighlightBars.setAttribute(
+    "aria-label",
+    `Highlighted MAE for ${qm9CohortLabel(state.qm9Cohort)}. ${accessibleSummary.join(". ")}.`,
+  );
+}
+
+function renderQm9Table(cohort) {
+  const fragment = document.createDocumentFragment();
+  for (const target of state.qm9.target_order) {
+    const result = cohort.targets[target];
+    const row = document.createElement("tr");
+    const values = [
+      target.toUpperCase(),
+      result.unit,
+      formatQm9Metric(result.mist.mae),
+      formatQm9Metric(result.ridge.mae),
+      `${result.mae_percent_reduction_vs_ridge.toFixed(2)}%`,
+      result.mist.r2.toFixed(4),
+      result.ridge.r2.toFixed(4),
+    ];
+    for (const [index, value] of values.entries()) {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      cell.textContent = value;
+      if (index === 0) cell.setAttribute("scope", "row");
+      row.append(cell);
+    }
+    fragment.append(row);
+  }
+  elements.qm9TargetRows.replaceChildren(fragment);
+}
+
+function renderQm9Results() {
+  const cohort = state.qm9.cohorts[state.qm9Cohort];
+  const aggregate = cohort.aggregate;
+  elements.qm9AggregateMist.textContent = aggregate.mist.toFixed(4);
+  elements.qm9AggregateRidge.textContent = aggregate.ridge.toFixed(4);
+  elements.qm9AggregateReduction.textContent =
+    `${aggregate.percent_reduction_vs_ridge.toFixed(1)}%`;
+  elements.qm9CohortRows.textContent = cohort.rows.toLocaleString("en-US");
+  elements.qm9CohortLabel.textContent = qm9CohortLabel(state.qm9Cohort);
+
+  for (const button of elements.qm9CohortButtons) {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.qm9Cohort === state.qm9Cohort),
+    );
+  }
+  renderQm9Bars(cohort);
+  renderQm9Table(cohort);
+}
+
+function showQm9Error(error) {
+  const notice = document.createElement("p");
+  notice.className = "error-state";
+  notice.setAttribute("role", "alert");
+  notice.textContent = `The aggregate QM9 result could not be loaded: ${error.message}`;
+  elements.qm9Panel.prepend(notice);
+  elements.qm9Panel.setAttribute("aria-busy", "false");
 }
 
 function selectedData() {
@@ -320,6 +490,37 @@ for (const button of elements.toggleButtons) {
     render();
   });
 }
+
+for (const button of elements.qm9CohortButtons) {
+  button.addEventListener("click", () => {
+    if (!state.qm9) return;
+    state.qm9Cohort = button.dataset.qm9Cohort;
+    renderQm9Results();
+  });
+}
+
+fetch(new URL("./qm9-results.json", document.baseURI))
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+  })
+  .then((data) => {
+    validateQm9Payload(data);
+    state.qm9 = data;
+    const fingerprint = data.provenance.inference_fingerprint;
+    elements.qm9Provenance.textContent =
+      `Authenticated aggregate summary · one test inference · zero retries · ` +
+      `fingerprint ${fingerprint.slice(0, 12)}`;
+    elements.qm9Provenance.title =
+      `Full inference fingerprint: ${fingerprint}; Phase 3 run: ` +
+      data.provenance.phase3_run_sha256;
+    for (const button of elements.qm9CohortButtons) button.disabled = false;
+    elements.qm9Panel.setAttribute("aria-busy", "false");
+    renderQm9Results();
+  })
+  .catch(showQm9Error);
 
 fetch(new URL("./demo-data.json", document.baseURI))
   .then((response) => {
