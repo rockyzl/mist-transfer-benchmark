@@ -10,9 +10,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = REPO_ROOT / "configs/qm9_28m.toml"

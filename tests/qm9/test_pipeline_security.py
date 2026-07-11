@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import copy
 import shlex
+import tomllib
 from pathlib import Path
 
 import pytest
-import tomllib
 
 from mist_transfer_benchmark.qm9.pipeline import (
     QM9AuditError,

@@ -8,7 +8,7 @@ import stat
 import tempfile
 import urllib.request
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -47,7 +47,7 @@ class DownloadRecord:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _stat_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:

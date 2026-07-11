@@ -7,7 +7,7 @@ import importlib.metadata
 import json
 import platform
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -97,7 +97,7 @@ def write_run_artifacts(
     complete = dict(artifact)
     complete["artifact_schema_version"] = "1.0"
     complete["benchmark_code_version"] = __version__
-    complete["created_at_utc"] = datetime.now(timezone.utc).isoformat()
+    complete["created_at_utc"] = datetime.now(UTC).isoformat()
     complete["environment"] = environment_metadata()
     complete["artifacts"] = {
         "predictions": predictions_path.name,

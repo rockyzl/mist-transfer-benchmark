@@ -8,10 +8,10 @@ import resource
 import sys
 import tempfile
 import time
+import tomllib
 from pathlib import Path
 
 import numpy as np
-import tomllib
 from scipy import sparse
 
 from .data import load_qm9_identities

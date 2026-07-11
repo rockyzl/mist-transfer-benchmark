@@ -13,13 +13,13 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+import tomllib
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import rdkit
-import tomllib
 
 from .constants import (
     EXPECTED_CONTENT_TYPE,
@@ -72,7 +72,7 @@ class QM9AuditError(ValueError):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _distribution_version(name: str) -> str | None:

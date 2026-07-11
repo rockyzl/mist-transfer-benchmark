@@ -11,10 +11,10 @@ import signal
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 import numpy as np
-import tomllib
 
 from .constants import TARGET_COLUMNS
 from .data import load_qm9_identities

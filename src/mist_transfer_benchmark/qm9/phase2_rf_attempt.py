@@ -9,9 +9,8 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 from .data import load_qm9_identities
 from .download import assert_source_unchanged, copy_validated_source

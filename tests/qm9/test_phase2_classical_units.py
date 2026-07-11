@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import copy
+import tomllib
 from pathlib import Path
 
 import numpy as np
 import pytest
-import tomllib
 from scipy import sparse
 
 from mist_transfer_benchmark.qm9.data import load_qm9_identities
