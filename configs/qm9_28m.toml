@@ -905,8 +905,8 @@ source_scope = "authenticated-phase-2-and-phase-3-aggregate-artifacts-only"
 contains_row_ids_labels_predictions_data_or_weights = false
 report_path = "docs/qm9_28m_results.md"
 site_entrypoint = "site/index.html"
-local_static_site_deployed = false
-deployed_url_remains_stale_until_future_push = true
+local_static_site_deployed = true
+deployed_url_remains_stale_until_future_push = false
 aggregate_only_publication_authorized_by_repository_owner = true
 metrics_changed_by_presentation_phase = false
 
