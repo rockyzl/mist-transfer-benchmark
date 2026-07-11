@@ -1,4 +1,4 @@
-"""Command-line interface for validation and ECFP baselines."""
+"""Command-line interface for redox benchmarks and the isolated QM9 Phase 1 audit."""
 
 from __future__ import annotations
 
@@ -72,6 +72,94 @@ def _parser() -> argparse.ArgumentParser:
         help="UNSAFE: fit a molecular-only model across heterogeneous target conditions",
     )
     run.add_argument("--overwrite", action="store_true")
+
+    repo_root = Path(__file__).resolve().parents[2]
+    qm9 = commands.add_parser(
+        "qm9-audit",
+        help="download, validate, split, and duplicate-audit QM9 without running models",
+    )
+    qm9.add_argument("--config", type=Path, default=repo_root / "configs/qm9_28m.toml")
+    qm9.add_argument("--cache-dir", type=Path, default=repo_root / "data/private/qm9")
+    qm9.add_argument("--output-dir", type=Path, required=True)
+    qm9.add_argument(
+        "--datasets-python",
+        type=Path,
+        required=True,
+        help="Python from an isolated datasets==3.2.0, numpy==2.5.1 environment",
+    )
+    qm9.add_argument("--force-download", action="store_true")
+    qm9.add_argument("--overwrite", action="store_true")
+
+    features = commands.add_parser(
+        "qm9-features",
+        help="authenticate Phase 1 and build the frozen full-row QM9 ECFP4 CSR artifact",
+    )
+    features.add_argument("--config", type=Path, default=repo_root / "configs/qm9_28m.toml")
+    features.add_argument("--cache-dir", type=Path, default=repo_root / "data/private/qm9")
+    features.add_argument("--phase1-dir", type=Path, required=True)
+    features.add_argument("--output-dir", type=Path, required=True)
+    features.add_argument("--overwrite", action="store_true")
+
+    classical = commands.add_parser(
+        "qm9-classical",
+        help="run frozen Ridge/controls validation and exactly-once classical test evaluation",
+    )
+    classical.add_argument("--config", type=Path, default=repo_root / "configs/qm9_28m.toml")
+    classical.add_argument("--cache-dir", type=Path, default=repo_root / "data/private/qm9")
+    classical.add_argument("--phase1-dir", type=Path, required=True)
+    classical.add_argument("--feature-dir", type=Path, required=True)
+    classical.add_argument("--output-dir", type=Path, required=True)
+    classical.add_argument("--overwrite", action="store_true")
+
+    rf = commands.add_parser(
+        "qm9-rf-supplement",
+        help="run bounded random-forest validation only; never read or predict the test split",
+    )
+    rf.add_argument("--config", type=Path, default=repo_root / "configs/qm9_28m.toml")
+    rf.add_argument("--cache-dir", type=Path, default=repo_root / "data/private/qm9")
+    rf.add_argument("--phase1-dir", type=Path, required=True)
+    rf.add_argument("--feature-dir", type=Path, required=True)
+    rf.add_argument("--locked-run-dir", type=Path, required=True)
+    rf.add_argument("--output-dir", type=Path, required=True)
+    rf.add_argument("--overwrite", action="store_true")
+
+    mist_audit = commands.add_parser(
+        "qm9-mist-audit",
+        help="verify the pinned local MIST snapshot and isolated runtime without executing it",
+    )
+    mist_audit.add_argument(
+        "--config", type=Path, default=repo_root / "configs/qm9_28m.toml"
+    )
+    mist_audit.add_argument("--model-dir", type=Path, required=True)
+    mist_audit.add_argument("--runtime-python", type=Path, required=True)
+    mist_audit.add_argument("--output-dir", type=Path, required=True)
+    mist_audit.add_argument("--overwrite", action="store_true")
+
+    mist_acquire = commands.add_parser(
+        "qm9-mist-acquire",
+        help="atomically acquire or verify only the one pinned MIST model revision",
+    )
+    mist_acquire.add_argument(
+        "--model-dir",
+        type=Path,
+        default=repo_root / "data/private/qm9/mist-phase3/model",
+    )
+
+    mist = commands.add_parser(
+        "qm9-mist-infer",
+        help="run guarded pinned MIST smoke and exactly-once candidate-test inference",
+    )
+    mist.add_argument("--config", type=Path, default=repo_root / "configs/qm9_28m.toml")
+    mist.add_argument("--cache-dir", type=Path, default=repo_root / "data/private/qm9")
+    mist.add_argument("--phase1-dir", type=Path, required=True)
+    mist.add_argument("--phase2-dir", type=Path, required=True)
+    mist.add_argument("--audit-dir", type=Path, required=True)
+    mist.add_argument("--model-dir", type=Path, required=True)
+    mist.add_argument("--runtime-python", type=Path, required=True)
+    mist.add_argument("--output-dir", type=Path, required=True)
+    mist.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto")
+    mist.add_argument("--initial-batch-size", type=int, default=128)
+    mist.add_argument("--overwrite", action="store_true")
     return parser
 
 
@@ -225,13 +313,148 @@ def _run_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _qm9_audit_command(args: argparse.Namespace) -> int:
+    from .qm9.pipeline import run_phase1_audit
+
+    run = run_phase1_audit(
+        config_path=args.config,
+        cache_dir=args.cache_dir,
+        output_dir=args.output_dir,
+        datasets_python=args.datasets_python,
+        force_download=args.force_download,
+        overwrite=args.overwrite,
+        command=["mist-transfer", *sys.argv[1:]],
+    )
+    print(f"wrote {args.output_dir / 'phase1_run.json'}")
+    print(f"source sha256: {run['source']['source_sha256']}")
+    print(f"split counts: {json.dumps(run['split']['counts'], sort_keys=True)}")
+    train_test = run["duplicates"]["train_test_overlap"]
+    print(f"train-test duplicate identities: {train_test['identity_count']}")
+    print("scientific status: Phase 1 data/split audit only; no model result")
+    return 0
+
+
+def _qm9_classical_command(args: argparse.Namespace) -> int:
+    from .qm9.phase2_pipeline import run_phase2_classical
+
+    run = run_phase2_classical(
+        config_path=args.config,
+        cache_dir=args.cache_dir,
+        phase1_dir=args.phase1_dir,
+        feature_dir=args.feature_dir,
+        output_dir=args.output_dir,
+        overwrite=args.overwrite,
+        run_random_forest=False,
+    )
+    print(f"wrote {args.output_dir / 'phase2_run.json'}")
+    print(f"selection fingerprint: {run['selection_fingerprint']}")
+    print(f"scientific status: {run['scientific_status']}")
+    return 0
+
+
+def _qm9_features_command(args: argparse.Namespace) -> int:
+    from .qm9.phase2_pipeline import run_phase2_feature_stage
+
+    result = run_phase2_feature_stage(
+        config_path=args.config,
+        cache_dir=args.cache_dir,
+        phase1_dir=args.phase1_dir,
+        output_dir=args.output_dir,
+        overwrite=args.overwrite,
+    )
+    print(f"wrote {args.output_dir / 'feature_manifest.json'}")
+    print(f"canonical CSR sha256: {result['matrix']['canonical_csr_sha256']}")
+    return 0
+
+
+def _qm9_rf_supplement_command(args: argparse.Namespace) -> int:
+    from .qm9.phase2_rf_attempt import run_rf_validation_supplement
+
+    result = run_rf_validation_supplement(
+        config_path=args.config,
+        cache_dir=args.cache_dir,
+        phase1_dir=args.phase1_dir,
+        feature_dir=args.feature_dir,
+        locked_run_dir=args.locked_run_dir,
+        output_dir=args.output_dir,
+        overwrite=args.overwrite,
+    )
+    print(f"wrote {args.output_dir / 'random_forest_attempt.json'}")
+    print(f"validation-only status: {result['status']}")
+    print("test labels loaded: false")
+    return 0
+
+
+def _qm9_mist_audit_command(args: argparse.Namespace) -> int:
+    from .qm9.phase3_pipeline import run_phase3_audit
+
+    result = run_phase3_audit(
+        config_path=args.config,
+        model_dir=args.model_dir,
+        runtime_python=args.runtime_python,
+        output_dir=args.output_dir,
+        overwrite=args.overwrite,
+    )
+    print(f"wrote {args.output_dir / 'phase3_audit_run.json'}")
+    print(f"model revision: {result['model_revision']}")
+    print("remote code executed: false")
+    return 0
+
+
+def _qm9_mist_acquire_command(args: argparse.Namespace) -> int:
+    from .qm9.phase3_acquire import acquire_snapshot
+
+    repo_root = Path(__file__).resolve().parents[2]
+    result = acquire_snapshot(args.model_dir, repo_root=repo_root)
+    print(f"model revision: {result['revision']}")
+    print(f"retrieval mode: {result['retrieval_mode']}")
+    print(f"verified files: {len(result['files'])}")
+    return 0
+
+
+def _qm9_mist_infer_command(args: argparse.Namespace) -> int:
+    from .qm9.phase3_pipeline import run_phase3_inference
+
+    result = run_phase3_inference(
+        config_path=args.config,
+        cache_dir=args.cache_dir,
+        phase1_dir=args.phase1_dir,
+        phase2_dir=args.phase2_dir,
+        audit_dir=args.audit_dir,
+        model_dir=args.model_dir,
+        runtime_python=args.runtime_python,
+        output_dir=args.output_dir,
+        device=args.device,
+        initial_batch_size=args.initial_batch_size,
+        overwrite=args.overwrite,
+    )
+    print(f"wrote {args.output_dir / 'phase3_run.json'}")
+    print(f"inference fingerprint: {result['inference_fingerprint']}")
+    print(f"scientific status: {result['scientific_status']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
         if args.command == "validate":
             return _validate_command(args)
-        return _run_command(args)
+        if args.command == "run-baseline":
+            return _run_command(args)
+        if args.command == "qm9-audit":
+            return _qm9_audit_command(args)
+        if args.command == "qm9-features":
+            return _qm9_features_command(args)
+        if args.command == "qm9-classical":
+            return _qm9_classical_command(args)
+        if args.command == "qm9-rf-supplement":
+            return _qm9_rf_supplement_command(args)
+        if args.command == "qm9-mist-audit":
+            return _qm9_mist_audit_command(args)
+        if args.command == "qm9-mist-acquire":
+            return _qm9_mist_acquire_command(args)
+        return _qm9_mist_infer_command(args)
     except DataContractError as error:
         _print_validation(error.report, as_json=False)
         return 2

@@ -1,0 +1,920 @@
+protocol_id = "qm9-28m-v0.1-draft"
+protocol_date = "2026-07-10"
+status = "phase-4-local-aggregate-report-and-static-demo-complete-preliminary-result"
+scientific_result_available = true
+
+[scope]
+question = "Compare the released fine-tuned MIST-28M QM9 predictor with classical predictors on the same candidate reconstructed test rows and 12 targets."
+mist_operation = "inference-only"
+classical_training = "train-from-scratch-on-reconstructed-train"
+raw_foundation_checkpoint_is_predictor = false
+retrain_mist = false
+train_new_mist_head = false
+highlighted_targets = ["homo", "lumo", "gap"]
+
+[serialization]
+python_none_sentinel = "__PYTHON_NONE__"
+python_none_rule = "Decode this exact TOML string to Python None before calling RDKit or scikit-learn; never pass it as a literal string."
+parameter_json = 'json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) encoded as UTF-8 without a trailing newline'
+
+[upstream_mist]
+repository = "https://github.com/BattModels/mist"
+revision = "62ec2ed605021cb16d5e329b48e4280d27c151b7"
+historical_training_revision_claimed = false
+
+[[upstream_mist.audited_files]]
+path = "electrolyte_fm/data_modules/molnet_dataset.py"
+url = "https://github.com/BattModels/mist/blob/62ec2ed605021cb16d5e329b48e4280d27c151b7/electrolyte_fm/data_modules/molnet_dataset.py"
+sha256 = "c55c89792c5a7f706831037129059b14a9e8ab4178c0236cfa4a0040c32ad5aa"
+role = "QM9 source URL and data-module routing"
+
+[[upstream_mist.audited_files]]
+path = "electrolyte_fm/data_modules/utils.py"
+url = "https://github.com/BattModels/mist/blob/62ec2ed605021cb16d5e329b48e4280d27c151b7/electrolyte_fm/data_modules/utils.py"
+sha256 = "60652b02681f3442c60ce2a283126d3ca5de7cc038258fbfb2830744a88225ff"
+role = "public two-stage random split implementation"
+
+[[upstream_mist.audited_files]]
+path = "submit/moleculenet_tasks.libsonnet"
+url = "https://github.com/BattModels/mist/blob/62ec2ed605021cb16d5e329b48e4280d27c151b7/submit/moleculenet_tasks.libsonnet"
+sha256 = "f719bdbe68d36ad46fa103a3bf01b39a9cedda4309cb64a36ec01714eeb6306e"
+role = "QM9 target order and declared random split"
+
+[[upstream_mist.audited_files]]
+path = "opt/package/datasets/qm9.yaml"
+url = "https://github.com/BattModels/mist/blob/62ec2ed605021cb16d5e329b48e4280d27c151b7/opt/package/datasets/qm9.yaml"
+sha256 = "9f3673c447638e751b5cb98f624a2df07fc61c7f03345979b9e524fd23a62c96"
+role = "QM9 row-count declaration, channel order, and exact checkpoint unit strings"
+
+[dataset]
+id = "deepchem-qm9-for-mist-28m-reconstruction"
+url = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/qm9.csv"
+id_column = "mol_id"
+smiles_column = "smiles"
+stable_record_id = "qm9:{source_row_index:06d}:{mol_id}"
+raw_rows_redistributed_by_this_repository = false
+labels_are_experimental_measurements = false
+label_origin = "QM9 quantum-chemistry calculations"
+
+[dataset.http_head_observation]
+observed_on = "2026-07-10"
+content_length_bytes = 29856825
+etag = "84d1e24e955bf96ed6b2986687119ad9-4"
+etag_is_content_hash = false
+last_modified = "2020-07-10"
+
+[dataset.upstream_declaration]
+row_count = 133885
+required_target_columns = [
+  "mu",
+  "alpha",
+  "homo",
+  "lumo",
+  "gap",
+  "r2",
+  "zpve",
+  "u0",
+  "u298",
+  "h298",
+  "g298",
+  "cv",
+]
+
+[dataset.protocol_expectation]
+identity_columns = ["mol_id", "smiles"]
+identity_columns_upstream_declared_by_pinned_mist_sources = false
+
+[dataset.local_verification]
+status = "technical-audit-complete-2026-07-10"
+verified_at_utc = "2026-07-10T21:33:43.014486+00:00"
+verified_fields = [
+  "content-bytes",
+  "content-sha256",
+  "http-get-status-and-headers",
+  "exact-header-and-order",
+  "row-count",
+  "mol-id-nonempty-and-unique",
+  "raw-smiles-nonempty",
+  "all-12-targets-numeric-and-finite",
+]
+content_sha256_required = true
+content_bytes = 29856825
+content_sha256 = "3e668f8c34e4bc392a90d417a50a5eed3b64b842a817a633024bdc054c68ccb4"
+http_status = 200
+final_url = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/qm9.csv"
+etag = '"84d1e24e955bf96ed6b2986687119ad9-4"'
+last_modified = "Fri, 10 Jul 2020 07:00:04 GMT"
+content_type = "text/csv"
+parsed_rows = 133885
+observed_header = [
+  "mol_id",
+  "smiles",
+  "A",
+  "B",
+  "C",
+  "mu",
+  "alpha",
+  "homo",
+  "lumo",
+  "gap",
+  "r2",
+  "zpve",
+  "u0",
+  "u298",
+  "h298",
+  "g298",
+  "cv",
+  "u0_atom",
+  "u298_atom",
+  "h298_atom",
+  "g298_atom",
+]
+header_sha256 = "b866cddb483b1a3950bac9fe63eec5771560413846040ae9f397f9afbc93de4f"
+source_row_index_sha256 = "4a06d0363bd28b7aa9d694cca0b4b64794d2a654d1a9cbf055f357b42b16afe0"
+mol_id_sha256 = "4bcced7297703c1f931a8fc51384f2623c42759fd17f7f015715a025eec250b5"
+raw_smiles_sha256 = "365defbce98172d8f99f5f85d3443432043c2fdb03c51b8b69e6cb8fa215614f"
+row_identity_sha256 = "1394c544f06ca49e2ecc656653c8ebe41b41ee5da10c0817f9a41cf5bbac0307"
+identity_hash_serialization = "one canonical JSON value/object per line, UTF-8, final LF"
+
+[model]
+publisher = "mist-models"
+id = "mist-models/mist-26.9M-kkgx0omx-qm9"
+revision = "65ceeed479609e9dcaef04e687556e2b39e25f23"
+expected_output_count = 12
+expected_predict_output = "checkpoint-unit-value-scales-after-internal-inverse-transform"
+input_smiles = "raw-csv-smiles-with-reviewed-official-preprocessing"
+trust_remote_code = true
+remote_code_review_required = true
+tokenizer_id = "mist-models/mist-26.9M-kkgx0omx-qm9"
+tokenizer_revision = "65ceeed479609e9dcaef04e687556e2b39e25f23"
+tokenizer_revision_must_equal_model_revision = true
+weight_download_in_ci = false
+weights_redistributed_by_this_repository = false
+license_review_required_before_download = true
+
+[model.hugging_face_api_observation]
+observed_on = "2026-07-10"
+safetensors_bytes = 108614208
+safetensors_sha256 = "f92e42f932c75e39a1dcb070fca8fd1c3fb3a4dcb763fb15447f035d770a9618"
+local_weight_file_verified = true
+
+[model.local_verification]
+status = "phase-3-complete-fixed-revision-local-snapshot"
+verified_fields = [
+  "exact-10-file-allowlist",
+  "every-file-byte-count-and-sha256",
+  "model-safetensors-byte-count-and-sha256",
+  "safetensors-header-and-145-f32-tensor-extents",
+  "12-output-head-and-transform-tensors",
+  "pinned-remote-code-static-review",
+  "model-card-and-metadata-rights-boundary",
+]
+weight_bytes_and_sha256_required = true
+allowlisted_file_count = 10
+allowlisted_files_canonical_sha256 = "76549ea643813af23d733da5811427fb34ea72172ee9b216af3378f8e548e830"
+model_audit_sha256 = "56d0dd48697e4366dbbaff3eec083d1ee170b25ed10e9196fb2efedc0e981ca1"
+remote_code_review_result = "pass-under-mandatory-runtime-guards"
+remote_code_executed_during_audit = false
+weights_redistributed = false
+rights_policy = "apply-stricter-model-card-research-only-no-redistribution-no-commercial-use-restrictions"
+
+[checkpoint_repository_declared_environment]
+datasets = "==3.2.0"
+transformers = "==4.57.1"
+torch = "==2.9.0"
+scikit_learn = "==1.7.2"
+smirk = "==0.2.0"
+historical_training_environment_verified = false
+
+[mist_inference_environment]
+purpose = "project-chosen released-checkpoint inference runtime; not a historical training environment"
+status = "phase-3-complete-66-package-freeze-and-isolated-smoke-pass"
+python = "==3.12.12"
+numpy = "==2.5.1"
+pandas = "==2.3.3"
+rdkit_distribution = "==2026.3.3"
+datasets = "==3.2.0"
+transformers = "==4.57.1"
+torch = "==2.9.0"
+scikit_learn = "==1.7.2"
+smirk = "==0.2.0"
+complete_transitive_lock_sha256_required = true
+isolated_remote_code_smoke_test_required = true
+historical_checkpoint_equivalence_claimed = false
+complete_transitive_distribution_count = 66
+complete_transitive_lock_canonical_sha256 = "1f668948dc94738e74e97dc0e8e14530f090415af5b7ebdc14f7354340ea1bc8"
+complete_transitive_lock_file_sha256 = "28e6c054855c6ca015e2b9207385e5ef88417d4c94c2c36e875caaf0bd223d1d"
+runtime_environment_json_sha256 = "11df2ae29cce2a9d3a2c1d69aaf4b4afec868906b5c9d7c77ffbc6bc0020ed2a"
+torch_cuda_version = "12.8"
+cuda_device = "NVIDIA RTX PRO 2000 Blackwell Generation Laptop GPU"
+cuda_device_memory_bytes = 8546484224
+
+[reconstruction_environment]
+purpose = "project-chosen candidate split reconstruction, duplicate audit, and classical baselines"
+python = "==3.12.12"
+numpy = "==2.5.1"
+pandas = "==2.3.3"
+rdkit_distribution = "==2026.3.3"
+rdkit_runtime = "2026.03.3"
+scipy = "==1.18.0"
+scikit_learn = "==1.9.0"
+datasets = "==3.2.0"
+current_core_uv_lock_sha256 = "ab5ba87bc0a8fcc511332c2b369a0ec5158312d4a488d7fbf08cedf81dae94e5"
+current_core_runtime_versions_canonical_json = '{"numpy":"2.5.1","python":"3.12.12","rdkit":"2026.03.3","scikit-learn":"1.9.0","scipy":"1.18.0"}'
+current_core_runtime_versions_sha256 = "04a2a8a50aa37262a83b1d89c23b1b47f668250e3a965599309fc0950665499e"
+current_core_lock_contains_datasets = false
+final_reconstruction_lock_required = true
+historical_checkpoint_equivalence_claimed = false
+
+[targets]
+ordered_names = [
+  "mu",
+  "alpha",
+  "homo",
+  "lumo",
+  "gap",
+  "r2",
+  "zpve",
+  "u0",
+  "u298",
+  "h298",
+  "g298",
+  "cv",
+]
+checkpoint_unit_strings = [
+  "debye",
+  "cubic bohr",
+  "hartree",
+  "hartree",
+  "hartree",
+  "square bohr",
+  "hartree",
+  "hartree",
+  "hartree",
+  "hartree",
+  "hartree",
+  "calorie / mole / kelvin",
+]
+display_units = [
+  "D",
+  "bohr^3",
+  "hartree",
+  "hartree",
+  "hartree",
+  "bohr^2",
+  "hartree",
+  "hartree",
+  "hartree",
+  "hartree",
+  "hartree",
+  "cal/(mol K)",
+]
+validation_uses_exact_checkpoint_unit_strings = true
+all_targets_used_for_primary_classical_training = true
+
+[split]
+name = "candidate-split-reconstructed-from-public-mist-code"
+certified_by_checkpoint_publisher = false
+upstream_mist_revision = "62ec2ed605021cb16d5e329b48e4280d27c151b7"
+library = "datasets==3.2.0"
+numpy = "==2.5.1"
+function = "Dataset.train_test_split"
+source_order_is_part_of_identity = true
+shuffle = true
+seed_first = 42
+first_test_size = 0.2
+seed_second = 42
+second_input = "first_test_partition"
+second_test_size = 0.5
+second_train_name = "validation"
+second_test_name = "test"
+derived_train_rows_if_upstream_row_count_matches = 107108
+derived_validation_rows_if_upstream_row_count_matches = 13388
+derived_test_rows_if_upstream_row_count_matches = 13389
+
+[identity_audit]
+identity = "RDKit canonical isomeric SMILES derived from raw source SMILES"
+mutate_mist_input = false
+run_before_predictions = true
+audit_train_validation_overlap = true
+audit_train_test_overlap = true
+audit_validation_test_overlap = true
+audit_within_split_duplicates = true
+
+[cohorts.primary]
+id = "complete-candidate-reconstructed-test"
+derived_rows_if_reconstruction_matches = 13389
+definition = "Every row assigned to test by the frozen candidate split reconstructed from public MIST code."
+
+[cohorts.secondary]
+id = "duplicate-clean-candidate-reconstructed-test"
+expected_rows_known = false
+row_count_requirement = "computed-before-inference-and-then-frozen"
+exclude_if_identity_in = ["train", "validation"]
+deduplicate_within_test = true
+within_test_keep = "lowest-source-row-index"
+retrain_for_subset = false
+
+[features]
+representation = "binary Morgan fingerprint (ECFP4)"
+rdkit_api = "rdFingerprintGenerator.GetMorganGenerator"
+radius = 2
+fp_size = 2048
+count_simulation = false
+include_chirality = true
+use_bond_types = true
+only_nonzero_invariants = false
+include_ring_membership = true
+count_bounds = "__PYTHON_NONE__"
+atom_invariants_generator = "__PYTHON_NONE__"
+bond_invariants_generator = "__PYTHON_NONE__"
+include_redundant_environments = false
+molecule_parser = "Chem.MolFromSmiles(source_smiles, sanitize=True)"
+fingerprint_method = "GetFingerprint(mol)"
+feature_matrix_storage = "scipy.sparse.csr_matrix"
+feature_matrix_dtype = "float64"
+feature_matrix_values = "binary-0.0-or-1.0"
+tanimoto_storage = "RDKit ExplicitBitVect"
+scalable_sparse_or_bounded_memory_implementation_required = true
+
+[classical]
+controls = ["training-target-means", "ecfp-tanimoto-1nn"]
+primary_models = ["multi-output-ridge", "multi-output-random-forest"]
+all_models_receive_all_12_train_targets = true
+target_transform = "per-target-standard-score-fit-on-train-only"
+inverse_target_transform_before_checkpoint_scale_metrics = true
+model_seed = 42
+nearest_neighbor_tie_break = "lowest-training-source-row-index"
+selection_split = "validation"
+selection_metric = "mean-over-12-of-mae-divided-by-training-target-standard-deviation"
+exact_tie_break = "first-candidate-in-listed-order"
+
+[classical.training_target_means]
+implementation = "numpy.mean"
+input_dtype = "float64"
+axis = 0
+fit_split = "train"
+
+[classical.tanimoto_1nn]
+implementation = "rdkit.DataStructs.BulkTanimotoSimilarity"
+return_distance = false
+query_order = "ascending-source-row-index"
+train_order = "ascending-source-row-index"
+target_vector = "complete-12-target-training-row"
+exact_similarity_tie_break = "lowest-training-source-row-index"
+worker_count = 1
+
+[classical.target_standard_scaler]
+implementation = "sklearn.preprocessing.StandardScaler"
+copy = true
+with_mean = true
+with_std = true
+fit_split = "train"
+variance_ddof = 0
+zero_variance_policy = "stop"
+get_params_sha256_required = true
+fitted_state_fields = ["mean_", "var_", "scale_", "n_samples_seen_", "n_features_in_"]
+fitted_state_json = "Object keyed by fitted_state_fields; convert NumPy arrays/scalars to JSON lists/numbers, then apply serialization.parameter_json."
+fitted_state_sha256_required = true
+
+[classical.ridge]
+candidate_order = ["alpha-0.01", "alpha-0.1", "alpha-1", "alpha-10", "alpha-100"]
+solver = "lsqr"
+tol = 0.0001
+max_iter = 10000
+fit_intercept = true
+copy_X = true
+positive = false
+random_state = "__PYTHON_NONE__"
+feature_scaling = "no-feature-scaling"
+get_params_sha256_required_for_each_candidate = true
+
+[[classical.ridge.candidates]]
+id = "alpha-0.01"
+alpha = 0.01
+
+[[classical.ridge.candidates]]
+id = "alpha-0.1"
+alpha = 0.1
+
+[[classical.ridge.candidates]]
+id = "alpha-1"
+alpha = 1.0
+
+[[classical.ridge.candidates]]
+id = "alpha-10"
+alpha = 10.0
+
+[[classical.ridge.candidates]]
+id = "alpha-100"
+alpha = 100.0
+
+[classical.random_forest]
+n_estimators = 256
+max_depth = "__PYTHON_NONE__"
+bootstrap = true
+ccp_alpha = 0.0
+criterion = "squared_error"
+max_leaf_nodes = "__PYTHON_NONE__"
+max_samples = "__PYTHON_NONE__"
+min_impurity_decrease = 0.0
+min_samples_split = 2
+min_weight_fraction_leaf = 0.0
+monotonic_cst = "__PYTHON_NONE__"
+n_jobs = 16
+oob_score = false
+random_state = 42
+verbose = 0
+warm_start = false
+get_params_sha256_required_for_each_candidate = true
+candidate_order = [
+  "sqrt-leaf-1",
+  "sqrt-leaf-2",
+  "sqrt-leaf-4",
+  "fraction-0.25-leaf-1",
+  "fraction-0.25-leaf-2",
+  "fraction-0.25-leaf-4",
+]
+
+[[classical.random_forest.candidates]]
+id = "sqrt-leaf-1"
+max_features = "sqrt"
+min_samples_leaf = 1
+
+[[classical.random_forest.candidates]]
+id = "sqrt-leaf-2"
+max_features = "sqrt"
+min_samples_leaf = 2
+
+[[classical.random_forest.candidates]]
+id = "sqrt-leaf-4"
+max_features = "sqrt"
+min_samples_leaf = 4
+
+[resource_budget]
+status = "frozen-protocol-ceilings-require-hardware-approval-before-execution"
+cpu_worker_limit = 16
+max_parent_process_peak_rss_gib = 64
+max_reference_child_peak_rss_gib = 64
+reference_timeout_seconds = 120
+max_reference_json_bytes = 5000000
+max_wall_clock_hours_per_validation_candidate = 24
+max_wall_clock_hours_for_locked_test_evaluation = 24
+max_local_artifact_storage_gib = 100
+exceeding_any_ceiling = "stop-and-amend-protocol-before-any-rerun"
+
+[[classical.random_forest.candidates]]
+id = "fraction-0.25-leaf-1"
+max_features = 0.25
+min_samples_leaf = 1
+
+[[classical.random_forest.candidates]]
+id = "fraction-0.25-leaf-2"
+max_features = 0.25
+min_samples_leaf = 2
+
+[[classical.random_forest.candidates]]
+id = "fraction-0.25-leaf-4"
+max_features = 0.25
+min_samples_leaf = 4
+
+[evaluation]
+one_shot_test = true
+same_test_record_ids_for_every_method = true
+row_level_predictions_required = true
+checkpoint_value_scale_metrics = ["mae", "rmse", "r2"]
+normalized_metrics = ["mae_over_training_target_standard_deviation"]
+aggregate_metric = "unweighted-mean-normalized-mae-across-12-targets"
+complete_12_target_report_required = true
+highlighted_target_report = ["homo", "lumo", "gap"]
+uncertainty_method = "REQUIRES_PROTOCOL_AMENDMENT_BEFORE_PUBLIC_CLAIM"
+
+[artifacts]
+source_manifest = "required"
+source_sha256 = "required"
+private_source_snapshot_and_final_equality_check = "required"
+upstream_mist_revision_and_audited_file_sha256 = "required"
+reconstruction_environment_and_final_lock_sha256 = "required"
+mist_inference_environment_and_final_lock_sha256 = "required"
+benchmark_git_revision_and_dirty_state = "required"
+execution_code_provenance_manifest_and_sha256 = "required"
+split_assignments_and_sha256 = "required"
+duplicate_audit_and_sha256 = "required"
+validation_candidates_and_scores = "required"
+fingerprint_generator_config_and_sha256 = "required"
+feature_matrix_manifest_and_sha256 = "required"
+standard_scaler_get_params_and_sha256 = "required"
+standard_scaler_fitted_state_and_sha256 = "required"
+ridge_candidate_get_params_and_sha256 = "required"
+random_forest_candidate_get_params_and_sha256 = "required"
+model_revision_and_weight_sha256 = "required"
+reviewed_remote_code_manifest = "required"
+tokenizer_revision = "required"
+row_level_predictions_and_sha256 = "required"
+metrics_and_sha256 = "required"
+command_result_failure_log = "required"
+runtime_peak_memory_hardware_and_budget_manifest = "required"
+
+[stop_gates]
+all_must_pass = [
+  "data-rights-reviewed",
+  "model-rights-reviewed",
+  "source-sha256-recorded",
+  "http-head-observations-rechecked-and-separated-from-local-verification",
+  "source-header-and-row-count-locally-verified",
+  "private-source-snapshot-and-final-cache-equality-verified",
+  "ids-unique-and-targets-finite",
+  "upstream-mist-revision-and-audited-file-hashes-match",
+  "datasets-version-exact",
+  "numpy-version-exact",
+  "rdkit-version-exact",
+  "scipy-version-exact",
+  "scikit-learn-version-exact",
+  "final-reconstruction-lock-created-and-hashed",
+  "split-counts-and-repeatability-match",
+  "historical-randomization-uncertainty-disclosed",
+  "duplicate-audit-frozen",
+  "exact-checkpoint-unit-strings-match",
+  "fingerprint-generator-options-match",
+  "feature-matrix-shape-storage-dtype-values-and-sha256-recorded",
+  "target-standard-scaler-ddof-zero-and-nonzero-variance-verified",
+  "target-standard-scaler-get-params-sha256-recorded",
+  "target-standard-scaler-fitted-state-sha256-recorded",
+  "ridge-and-random-forest-get-params-hashes-recorded",
+  "remote-code-reviewed-at-model-revision",
+  "local-weight-bytes-and-sha256-match-api-observation",
+  "mist-inference-direct-versions-and-complete-lock-created-and-hashed",
+  "mist-inference-isolated-smoke-test-passes",
+  "tokenizer-pinned-to-model-revision",
+  "preprocessing-verified-on-raw-csv-smiles",
+  "output-order-exact-unit-strings-and-inverse-transform-verified",
+  "same-row-completeness-verified",
+  "test-label-isolation-verified",
+  "runtime-and-memory-budget-approved",
+  "runtime-peak-memory-hardware-and-budget-usage-recorded",
+  "benchmark-git-revision-and-dirty-state-recorded",
+  "execution-code-provenance-stable-and-hashed",
+  "no-prior-test-evaluation-for-run-fingerprint",
+]
+
+[phase_1_observation]
+status = "technical-data-split-duplicate-audit-complete"
+scientific_model_result = false
+candidate_split_publisher_certified = false
+raw_data_and_generated_artifacts_tracked_by_git = false
+core_python = "3.12.12"
+core_numpy = "2.5.1"
+core_pandas = "2.3.3"
+core_rdkit = "2026.03.3"
+reference_python = "3.12.12"
+reference_datasets = "3.2.0"
+reference_numpy = "2.5.1"
+reference_pyarrow = "25.0.0"
+reference_train_test_split_source_sha256 = "1408e3485102e6b041f236adc31d6a05f32b0acc77338853196efa9eb756349f"
+reference_environment_freeze_canonical_json_sha256 = "51ce2416c3b9d4e3678f7d6ffce452b5d9d698f4e57ea566bd0c85ddb3174720"
+reference_environment_freeze_file_sha256 = "83948102d64e44d124cbe6e6b644c2f68c3ea6fe83ab415510d9a4be9466902f"
+
+[phase_1_observation.split]
+exact_ordered_membership_match_with_datasets_3_2_0 = true
+train_rows = 107108
+validation_rows = 13388
+test_rows = 13389
+train_ordered_index_sha256 = "b523014c59c4845a7c89b150e85ddc1a53804dbcc3b328246d32a8db6aa727f0"
+validation_ordered_index_sha256 = "c0692f48fd5085e8764bdecee67bd44f8cc2b4cdf9454ec8ff5be5f5e2219084"
+test_ordered_index_sha256 = "736daeb02a8420eb58643e0c7f0b56f958f279fe29e818c62ffcb07700ea5a73"
+assignment_rows_sha256 = "2be8065e3ab7089144c8e649977ecc6a60b63872e47db64430e43613456254cc"
+assignment_tsv_file_sha256 = "7cd0a0970a4643812ce263a40dfa27130216536b2c9096f69b556570b80ad5de"
+
+[phase_1_observation.duplicates]
+rdkit_parse_failures = 0
+unique_canonical_identities = 133798
+duplicate_identity_count = 87
+rows_in_duplicate_identities = 174
+train_test_overlap_identities = 15
+train_test_overlap_train_rows = 15
+train_test_overlap_test_rows = 15
+train_validation_overlap_identities = 15
+validation_test_overlap_identities = 3
+duplicate_clean_test_rows = 13370
+duplicate_clean_excluded_train_or_validation_identity = 18
+duplicate_clean_excluded_within_test_duplicate = 1
+duplicate_clean_retained_ordered_index_sha256 = "fecbe1890c8c1eb7bbace00c7a7a390a9ab0d5a719cf311d38d0266f3e609189"
+duplicate_clean_excluded_ordered_index_sha256 = "0a732f197d7f53b0dca43a9509571ed0c0520bf881c2fcd067f35f99ff33a32f"
+canonical_smiles_sequence_sha256 = "e4fcfe60a9e3edb43f0036fefb8752b7bcd76fb7b3123f4ed4bb1c848d732325"
+
+[phase_1_observation.artifacts]
+legacy_pre_hardening_datasets_reference_sha256 = "75001d442c8f0c56eb0b5be64b423b85ae317f54c53ea9357d7a9b30a0aa5c23"
+row_manifest_sha256 = "7075ade8845168a54a6e2dcdc5a8916fe853ac1705786f8aae4a82bf8e24ef5c"
+duplicate_events_sha256 = "80a579afa6acf87442ea74d756354c510a436f2e4b4a46a145d57ef2906d14ca"
+duplicate_summary_sha256 = "214db1043e9ab1a3c23d7ed169d6343895cf82cb77b6479f9250a30c1c2d8c2c"
+
+[phase_2_observation]
+status = "locked-ridge-and-controls-test-complete-rf-validation-only-supplement"
+scientific_model_result = true
+mist_phase_3_started = true
+test_evaluation_count = 1
+random_forest_test_evaluated = false
+locked_selection_fingerprint = "64969e850383e563ae26135b433007ae041e3353ab987214caf7ba020b1d2600"
+locked_phase_2_run_sha256 = "33bd8012d292818dcc05c03a6d1dedcb0cd6b80b414d1cc2a7728942d5bdf9ab"
+locked_execution_protocol_snapshot_sha256 = "0c4f89123f1483d28fcd83970db2ca304f378ed254398f2e1c4774ece533c496"
+post_run_observation_update_differs_from_execution_snapshot = true
+feature_shape = [133885, 2048]
+feature_nnz = 2730913
+feature_canonical_csr_sha256 = "3b069c0c77e12616857e5f00d70f16a5904860aa29a311073b356b14966f9b9c"
+feature_file_sha256 = "06a99bd3c6f217252d9f5a0d02791dd21eb5aa07f77194786dd4c5463afca0f5"
+generator_canonical_json_sha256 = "02f92805f1221e3cf3de464c2b9fbda56863c0973979274729de8c132e91f354"
+scaler_parameters_sha256 = "fb7025235b30e6c7859a845664b97dbe534f3e58f006b5f076048b436167b955"
+scaler_fitted_state_sha256 = "d66c4365238efcd1975221589ba2c7fe3f809aa90fbeeca4e7a6b163a0669512"
+selected_ridge_candidate = "alpha-10"
+selected_ridge_parameters_sha256 = "8c0c73105ff0c9e93643aab9b54f39ea9a1b33394e8635b86953299ade037939"
+ridge_validation_scores = [0.37081135061853615, 0.37079661630755295, 0.37065466786401813, 0.36968988231442795, 0.3712913823031805]
+training_mean_validation_score = 0.7769910377403156
+tanimoto_1nn_validation_score = 0.6159654522234568
+locked_run_runtime_seconds = 333.4031530569773
+locked_run_peak_rss_gib = 0.3721199035644531
+prediction_rows = 40167
+
+[phase_2_observation.locked_artifacts]
+predictions_sha256 = "71ede81bcebd63e42eede04b9ec463ab8a3951aefd2b1226b6be363aae6fbb9f"
+test_metrics_sha256 = "27a76672b56c3dffd34aa1c2f051d5e505933f3dc06b471b844a94ca0ea9fb6d"
+validation_metrics_sha256 = "e33ffd3e621c605b31387d9fef10fadee6d0b8ec74105fc7cc762eabf8c22052"
+selection_lock_sha256 = "b15d6c98bc06c7a516bc5356f9e9869c07fc25ba6e425d2d2d01ab5a92247751"
+code_provenance_sha256 = "c640b00c01a3e8e46a5fca6b2f760d3729aa5050c12def4b23a1a4768e48e377"
+code_provenance_aggregate_sha256 = "50aae4b6832e8d8337af2db61a6d29ffac42209bf60c90e88e8c6077032d7ff5"
+
+[phase_2_observation.locked_test_aggregate]
+training_mean_full = 0.7790809934643851
+training_mean_duplicate_clean = 0.778891607163038
+tanimoto_1nn_full = 0.6146773890879392
+tanimoto_1nn_duplicate_clean = 0.6153394037589264
+ridge_full = 0.37004855807165865
+ridge_duplicate_clean = 0.37004764362542336
+
+[phase_2_observation.ridge_highlighted_full]
+homo_mae = 0.008664101391224413
+homo_rmse = 0.011661760543675893
+homo_r2 = 0.7262759503536609
+lumo_mae = 0.013554438746614524
+lumo_rmse = 0.01772174913687024
+lumo_r2 = 0.8571573944387212
+gap_mae = 0.015519770538843711
+gap_rmse = 0.020347992980246622
+gap_r2 = 0.8147326597697319
+
+[phase_2_observation.ridge_highlighted_duplicate_clean]
+homo_mae = 0.008666740991509277
+homo_rmse = 0.011665868570812185
+homo_r2 = 0.7261078378050199
+lumo_mae = 0.013548600470808322
+lumo_rmse = 0.017714845867510137
+lumo_r2 = 0.8570758368438551
+gap_mae = 0.015511769569773556
+gap_rmse = 0.020341699276745992
+gap_r2 = 0.8146056502812439
+
+[phase_2_observation.random_forest_validation_supplement]
+status = "complete-validation-only-no-test-evaluation"
+candidate_scores = [0.384986538625033, 0.4033652294643438, 0.4311451315095814, 0.35869808466905057, 0.3582335180618727, 0.3671745210854805]
+selected_candidate = "fraction-0.25-leaf-2"
+selected_parameters_sha256 = "49964a4608d3695f8e428be0ce1c857f472ecc2bd67c6979aa0c3ac4314d1217"
+runtime_seconds = 1026.543676347006
+maximum_candidate_peak_rss_gib = 6.547077178955078
+supplement_run_sha256 = "7dad8bf62d4045ddda8a5495d3cd1afe1af65ed29bda5dd906cb4e78f00482d7"
+attempt_artifact_sha256 = "a7904e43eeae12edfc9be06a28c70d3a778002d421862151f4bcf50b71780ef1"
+locked_selection_changed = false
+test_labels_loaded = false
+test_predictions_generated = false
+
+[phase_3_observation]
+status = "released-mist-inference-and-locked-ridge-comparison-complete"
+scientific_model_result = true
+preliminary_point_estimates_only = true
+official_checkpoint_test_reproduction_claimed = false
+candidate_split_publisher_certified = false
+mist_retrained_or_fine_tuned = false
+validation_selection_performed = false
+test_inference_count = 1
+test_inference_retries = 0
+operational_failure_count = 0
+test_rows = 13389
+duplicate_clean_test_rows = 13370
+device = "cuda"
+batch_size = 128
+batch_count = 105
+inference_fingerprint = "444e4dfede09a97573da2927334c8b701821f3bf0e4a71e4a4e0c1f0aefba11c"
+reservation_status = "completed"
+phase_1_run_sha256 = "82a0abba1b8c7ec8cea4a680eeb9f83c08ce3c5f3c140928b27d318ff45b97a4"
+phase_2_run_sha256 = "33bd8012d292818dcc05c03a6d1dedcb0cd6b80b414d1cc2a7728942d5bdf9ab"
+phase_3_audit_run_sha256 = "0660c6ef1c0e7184303957696a7d73aaf6d7a92ea2ead097e4bceadd2983dc1f"
+phase_3_run_sha256 = "5ca43007476bbf0b182f90be43beabab30434ecb8d143753d5f0764f53d908a0"
+execution_protocol_snapshot_sha256 = "14b9d76ee63a3e116e1285df27ec352ccc55496deeb78d373b598cd1530acfe4"
+post_run_observation_update_differs_from_execution_snapshot = true
+worker_runtime_seconds = 9.019580934982514
+total_runtime_seconds = 23.857965409988537
+worker_peak_rss_gib = 1.2622833251953125
+orchestrator_peak_rss_gib = 0.7814979553222656
+gpu_peak_memory_allocated_bytes = 205038592
+gpu_peak_memory_reserved_bytes = 346030080
+
+[phase_3_observation.smoke]
+status = "pass"
+scope = "64-train-plus-64-validation-rows-no-test"
+rows = 128
+test_rows = 0
+device = "cuda"
+initial_batch_size = 128
+selected_batch_size = 128
+batch_count = 1
+operational_failure_count = 0
+smoke_sha256 = "98240614ca87f3114f59519b0aa3d6122952f2af70bab4e68c8c0c6c8252c5f0"
+
+[phase_3_observation.artifacts]
+model_audit_sha256 = "56d0dd48697e4366dbbaff3eec083d1ee170b25ed10e9196fb2efedc0e981ca1"
+code_provenance_sha256 = "979dddfe612857fa60fc3f4dc130f9f4abef83d57507dc39717e8e79044ab4f4"
+code_provenance_aggregate_sha256 = "475c7d5a26e7cefaf0c78ba1fe86e9b841fffc7b4ddec50eb06b595a18680af7"
+runtime_environment_sha256 = "11df2ae29cce2a9d3a2c1d69aaf4b4afec868906b5c9d7c77ffbc6bc0020ed2a"
+runtime_freeze_file_sha256 = "28e6c054855c6ca015e2b9207385e5ef88417d4c94c2c36e875caaf0bd223d1d"
+runtime_freeze_canonical_sha256 = "1f668948dc94738e74e97dc0e8e14530f090415af5b7ebdc14f7354340ea1bc8"
+smoke_sha256 = "98240614ca87f3114f59519b0aa3d6122952f2af70bab4e68c8c0c6c8252c5f0"
+worker_report_sha256 = "0641056e9b018f0170418711f0660aec34b4f94af2c123dda566a0377e510ec8"
+predictions_sha256 = "c3b7abf994f870f6066f0f890ea1c4d01ce10061b2ee0af115f920a28a5dcc6f"
+prediction_values_canonical_sha256 = "9f7e4e2c051f42099fbdb65de1d9a611efd4ece7cbde1dc89dce84e3de206317"
+metrics_sha256 = "fe84b07b329039c2540b2e7cf23da2eb92b13f1f469a5096f5bdf40e0a0da2f3"
+comparison_sha256 = "45534119f79ea5708dd58cee050290fe8847cc9ea933fcf26acfc9207caa229e"
+failure_log_sha256 = "843f02ac2ac68eb1fa085d87e0e5f0c52d076820f1c1cfbae86b2db1dbbfd32a"
+
+[phase_3_observation.aggregate]
+mist_full = 0.09506432328592
+mist_duplicate_clean = 0.09510356184623144
+locked_ridge_full = 0.37004855807165865
+locked_ridge_duplicate_clean = 0.37004764362542336
+mist_minus_locked_ridge_full = -0.27498423478573863
+mist_minus_locked_ridge_duplicate_clean = -0.27494408177919194
+
+[phase_3_observation.full_test.mu]
+mae = 0.4784568885024821
+rmse = 0.7342468405950063
+r2 = 0.7758032006715276
+normalized_mae = 0.3131496840012973
+
+[phase_3_observation.full_test.alpha]
+mae = 0.6155666764156991
+rmse = 1.0717296449808045
+r2 = 0.982752169804098
+normalized_mae = 0.07518364589980743
+
+[phase_3_observation.full_test.homo]
+mae = 0.004143533882100081
+rmse = 0.006140502533567574
+r2 = 0.9241086030307173
+normalized_mae = 0.18731326685646793
+
+[phase_3_observation.full_test.lumo]
+mae = 0.005035296503056042
+rmse = 0.007339010940833366
+r2 = 0.9755026185501939
+normalized_mae = 0.10725373781215485
+
+[phase_3_observation.full_test.gap]
+mae = 0.006128544720396808
+rmse = 0.009433142960857647
+r2 = 0.9601829994643277
+normalized_mae = 0.1289060650358369
+
+[phase_3_observation.full_test.r2]
+mae = 34.05327372906133
+rmse = 52.442444569559875
+r2 = 0.9640730307497981
+normalized_mae = 0.12161575691054431
+
+[phase_3_observation.full_test.zpve]
+mae = 0.0009410450891896802
+rmse = 0.0013757117401776275
+r2 = 0.9982951015607988
+normalized_mae = 0.02829935158129112
+
+[phase_3_observation.full_test.u0]
+mae = 0.7969571243829455
+rmse = 1.0771854744333453
+r2 = 0.9992713805779946
+normalized_mae = 0.019864602153685986
+
+[phase_3_observation.full_test.u298]
+mae = 1.0425620835282963
+rmse = 1.3125857048916065
+r2 = 0.9989181183369714
+normalized_mae = 0.025986585140578305
+
+[phase_3_observation.full_test.h298]
+mae = 1.4907405962617597
+rmse = 1.763574559751578
+r2 = 0.9980469558079901
+normalized_mae = 0.03715774632534351
+
+[phase_3_observation.full_test.g298]
+mae = 1.6410151751768856
+rmse = 1.8841868718283226
+r2 = 0.997770759820947
+normalized_mae = 0.04090269902416906
+
+[phase_3_observation.full_test.cv]
+mae = 0.22409760886330485
+rmse = 0.3258032143752294
+r2 = 0.9934973242891736
+normalized_mae = 0.05513873868986337
+
+[phase_3_observation.duplicate_clean_test.mu]
+mae = 0.47874856999636023
+rmse = 0.7346070609538805
+r2 = 0.7756839385858486
+normalized_mae = 0.3133405893259606
+
+[phase_3_observation.duplicate_clean_test.alpha]
+mae = 0.615762337318712
+rmse = 1.0722408002958068
+r2 = 0.9827424879090473
+normalized_mae = 0.07520754339233288
+
+[phase_3_observation.duplicate_clean_test.homo]
+mae = 0.004146346099735106
+rmse = 0.006143869166562673
+r2 = 0.9240322325378314
+normalized_mae = 0.18744039642444454
+
+[phase_3_observation.duplicate_clean_test.lumo]
+mae = 0.005036354342594373
+rmse = 0.007340901743534177
+r2 = 0.9754568826240957
+normalized_mae = 0.1072762701981668
+
+[phase_3_observation.duplicate_clean_test.gap]
+mae = 0.006129854176065885
+rmse = 0.009435597472057928
+r2 = 0.960110293074521
+normalized_mae = 0.1289336077536175
+
+[phase_3_observation.duplicate_clean_test.r2]
+mae = 34.08412466944447
+rmse = 52.47687037944346
+r2 = 0.9640593912943676
+normalized_mae = 0.1217259360520844
+
+[phase_3_observation.duplicate_clean_test.zpve]
+mae = 0.0009406735522275951
+rmse = 0.0013756694424523622
+r2 = 0.9982930986714368
+normalized_mae = 0.028288178625567453
+
+[phase_3_observation.duplicate_clean_test.u0]
+mae = 0.7961845081303738
+rmse = 1.0763201419873185
+r2 = 0.9992722253952468
+normalized_mae = 0.019845344261378805
+
+[phase_3_observation.duplicate_clean_test.u298]
+mae = 1.0424060206007943
+rmse = 1.312616617737062
+r2 = 0.9989175834323821
+normalized_mae = 0.02598269516355258
+
+[phase_3_observation.duplicate_clean_test.h298]
+mae = 1.4903325057197976
+rmse = 1.763298328587191
+r2 = 0.9980466942594568
+normalized_mae = 0.03714757438471613
+
+[phase_3_observation.duplicate_clean_test.g298]
+mae = 1.6406990532577863
+rmse = 1.8838308177266319
+r2 = 0.997770605791641
+normalized_mae = 0.04089481960909268
+
+[phase_3_observation.duplicate_clean_test.cv]
+mae = 0.2241831543071455
+rmse = 0.32594322238322876
+r2 = 0.9934896613272012
+normalized_mae = 0.055159786963863096
+
+[phase_4_presentation_observation]
+status = "local-aggregate-report-and-static-results-view-complete"
+aggregate_summary_path = "site/qm9-results.json"
+aggregate_summary_sha256 = "3079c647ccb093b821868a18a9d487142310583e28c405affdf2054ac796f910"
+aggregate_summary_bytes = 24715
+generator = "scripts/build_qm9_results.py"
+source_scope = "authenticated-phase-2-and-phase-3-aggregate-artifacts-only"
+contains_row_ids_labels_predictions_data_or_weights = false
+report_path = "docs/qm9_28m_results.md"
+site_entrypoint = "site/index.html"
+local_static_site_deployed = false
+deployed_url_remains_stale_until_future_push = true
+aggregate_only_publication_authorized_by_repository_owner = true
+metrics_changed_by_presentation_phase = false
+
+[phase_status]
+phase_0_protocol = "frozen-before-execution-post-run-observations-appended"
+phase_1_data_and_split = "technical-audit-complete-raw-and-row-level-artifacts-ignored"
+phase_2_classical = "locked-ridge-controls-test-complete-rf-validation-only-no-rf-test"
+phase_3_mist_inference = "complete-once-under-stricter-local-research-only-model-card-restrictions"
+phase_4_locked_test = "complete-mist-vs-already-locked-ridge-identical-cohorts"
+phase_5_report = "aggregate-only-report-and-static-demo-owner-authorized-for-deployment-uncertainty-documented"
+phase_6_optional_1_8b = "out-of-scope"

@@ -1,0 +1,714 @@
+{
+  "artifact_scope": "aggregate-only-no-row-level-data",
+  "caveats": [
+    "The split is a candidate reconstruction from public code, not a publisher-certified historical checkpoint split.",
+    "QM9 labels are DFT-computed quantum-chemistry properties, not experimental measurements.",
+    "These are preliminary point estimates without uncertainty intervals or repeated inference runs.",
+    "The comparison tests a released task-specific predictor against locked Ridge; it does not isolate pretraining causally.",
+    "A lower error does not demonstrate causal or mechanistic chemical understanding.",
+    "The random forest is validation-only and has no test metric.",
+    "Repository-owner authorization covers this aggregate-only presentation; raw data, row-level predictions, and weights are not published. Model-card restrictions remain in effect."
+  ],
+  "cohorts": {
+    "duplicate_clean_test": {
+      "aggregate": {
+        "lower_is_better": true,
+        "metric": "mean-normalized-mae-across-12-targets",
+        "mist": 0.09510356184623144,
+        "mist_minus_ridge": -0.27494408177919194,
+        "percent_reduction_vs_ridge": 74.29964398246541,
+        "ridge": 0.37004764362542336
+      },
+      "rows": 13370,
+      "targets": {
+        "alpha": {
+          "delta_mist_minus_ridge": {
+            "mae": -2.7265554141552624,
+            "normalized_mae": -0.3330140903300268,
+            "r2": 0.29732206769756053,
+            "rmse": -3.5056823675009547
+          },
+          "mae_percent_reduction_vs_ridge": 81.5767864366828,
+          "mist": {
+            "mae": 0.615762337318712,
+            "normalized_mae": 0.07520754339233288,
+            "r2": 0.9827424879090473,
+            "rmse": 1.0722408002958068
+          },
+          "ridge": {
+            "mae": 3.342317751473974,
+            "normalized_mae": 0.4082216337223597,
+            "r2": 0.6854204202114867,
+            "rmse": 4.577923167796762
+          },
+          "unit": "bohr^3"
+        },
+        "cv": {
+          "delta_mist_minus_ridge": {
+            "mae": -1.2524671430756216,
+            "normalized_mae": -0.3081668692047997,
+            "r2": 0.24174007444730505,
+            "rmse": -1.6867850821139787
+          },
+          "mae_percent_reduction_vs_ridge": 84.81812825253952,
+          "mist": {
+            "mae": 0.2241831543071455,
+            "normalized_mae": 0.055159786963863096,
+            "r2": 0.9934896613272012,
+            "rmse": 0.32594322238322876
+          },
+          "ridge": {
+            "mae": 1.476650297382767,
+            "normalized_mae": 0.3633266561686628,
+            "r2": 0.7517495868798961,
+            "rmse": 2.0127283044972075
+          },
+          "unit": "cal/(mol K)"
+        },
+        "g298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.193147351904045,
+            "normalized_mae": -0.3288423796923613,
+            "r2": 0.277110253124099,
+            "rmse": -19.203167007731896
+          },
+          "mae_percent_reduction_vs_ridge": 88.93949007934408,
+          "mist": {
+            "mae": 1.6406990532577863,
+            "normalized_mae": 0.04089481960909268,
+            "r2": 0.997770605791641,
+            "rmse": 1.8838308177266319
+          },
+          "ridge": {
+            "mae": 14.83384640516183,
+            "normalized_mae": 0.369737199301454,
+            "r2": 0.720660352667542,
+            "rmse": 21.08699782545853
+          },
+          "unit": "hartree"
+        },
+        "gap": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.009381915393707672,
+            "normalized_mae": -0.197336537641141,
+            "r2": 0.14550464279327713,
+            "rmse": -0.010906101804688064
+          },
+          "mae_percent_reduction_vs_ridge": 60.48256036493347,
+          "mist": {
+            "mae": 0.006129854176065885,
+            "normalized_mae": 0.1289336077536175,
+            "r2": 0.960110293074521,
+            "rmse": 0.009435597472057928
+          },
+          "ridge": {
+            "mae": 0.015511769569773556,
+            "normalized_mae": 0.3262701453947585,
+            "r2": 0.8146056502812439,
+            "rmse": 0.020341699276745992
+          },
+          "unit": "hartree"
+        },
+        "h298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.342861915137638,
+            "normalized_mae": -0.33258011456858144,
+            "r2": 0.2773736888217062,
+            "rmse": -19.322844160689435
+          },
+          "mae_percent_reduction_vs_ridge": 89.95272047655364,
+          "mist": {
+            "mae": 1.4903325057197976,
+            "normalized_mae": 0.03714757438471613,
+            "r2": 0.9980466942594568,
+            "rmse": 1.763298328587191
+          },
+          "ridge": {
+            "mae": 14.833194420857435,
+            "normalized_mae": 0.36972768895329755,
+            "r2": 0.7206730054377506,
+            "rmse": 21.086142489276625
+          },
+          "unit": "hartree"
+        },
+        "homo": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.004520394891774171,
+            "normalized_mae": -0.20434970697774496,
+            "r2": 0.19792439473281154,
+            "rmse": -0.005521999404249512
+          },
+          "mae_percent_reduction_vs_ridge": 52.15795529372296,
+          "mist": {
+            "mae": 0.004146346099735106,
+            "normalized_mae": 0.18744039642444454,
+            "r2": 0.9240322325378314,
+            "rmse": 0.006143869166562673
+          },
+          "ridge": {
+            "mae": 0.008666740991509277,
+            "normalized_mae": 0.3917901034021895,
+            "r2": 0.7261078378050199,
+            "rmse": 0.011665868570812185
+          },
+          "unit": "hartree"
+        },
+        "lumo": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.00851224612821395,
+            "normalized_mae": -0.1813140922036837,
+            "r2": 0.11838104578024056,
+            "rmse": -0.01037394412397596
+          },
+          "mae_percent_reduction_vs_ridge": 62.827493854840206,
+          "mist": {
+            "mae": 0.005036354342594373,
+            "normalized_mae": 0.1072762701981668,
+            "r2": 0.9754568826240957,
+            "rmse": 0.007340901743534177
+          },
+          "ridge": {
+            "mae": 0.013548600470808322,
+            "normalized_mae": 0.2885903624018505,
+            "r2": 0.8570758368438551,
+            "rmse": 0.017714845867510137
+          },
+          "unit": "hartree"
+        },
+        "mu": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.3183219155181877,
+            "normalized_mae": -0.20834146116529578,
+            "r2": 0.2684669862963186,
+            "rmse": -0.3542046730162459
+          },
+          "mae_percent_reduction_vs_ridge": 39.936482570007016,
+          "mist": {
+            "mae": 0.47874856999636023,
+            "normalized_mae": 0.3133405893259606,
+            "r2": 0.7756839385858486,
+            "rmse": 0.7346070609538805
+          },
+          "ridge": {
+            "mae": 0.797070485514548,
+            "normalized_mae": 0.5216820504912564,
+            "r2": 0.50721695228953,
+            "rmse": 1.0888117339701264
+          },
+          "unit": "D"
+        },
+        "r2": {
+          "delta_mist_minus_ridge": {
+            "mae": -73.81459637966321,
+            "normalized_mae": -0.2636168869161618,
+            "r2": 0.24048059526053,
+            "rmse": -93.05593114321834
+          },
+          "mae_percent_reduction_vs_ridge": 68.41100215272076,
+          "mist": {
+            "mae": 34.08412466944447,
+            "normalized_mae": 0.1217259360520844,
+            "r2": 0.9640593912943676,
+            "rmse": 52.47687037944346
+          },
+          "ridge": {
+            "mae": 107.89872104910768,
+            "normalized_mae": 0.3853428229682462,
+            "r2": 0.7235787960338376,
+            "rmse": 145.5328015226618
+          },
+          "unit": "bohr^2"
+        },
+        "u0": {
+          "delta_mist_minus_ridge": {
+            "mae": -14.037293858262515,
+            "normalized_mae": -0.3498874020665343,
+            "r2": 0.2786047083050214,
+            "rmse": -20.010142943630765
+          },
+          "mae_percent_reduction_vs_ridge": 94.63251647075423,
+          "mist": {
+            "mae": 0.7961845081303738,
+            "normalized_mae": 0.019845344261378805,
+            "r2": 0.9992722253952468,
+            "rmse": 1.0763201419873185
+          },
+          "ridge": {
+            "mae": 14.833478366392889,
+            "normalized_mae": 0.3697327463279131,
+            "r2": 0.7206675170902255,
+            "rmse": 21.08646308561808
+          },
+          "unit": "hartree"
+        },
+        "u298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.790866422363221,
+            "normalized_mae": -0.34374693853649785,
+            "r2": 0.2782445784478744,
+            "rmse": -19.773525887553788
+          },
+          "mae_percent_reduction_vs_ridge": 92.9725148337362,
+          "mist": {
+            "mae": 1.0424060206007943,
+            "normalized_mae": 0.02598269516355258,
+            "r2": 0.9989175834323821,
+            "rmse": 1.312616617737062
+          },
+          "ridge": {
+            "mae": 14.833272442964015,
+            "normalized_mae": 0.3697296337000504,
+            "r2": 0.7206730049845077,
+            "rmse": 21.08614250529085
+          },
+          "unit": "hartree"
+        },
+        "zpve": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.00825120928475599,
+            "normalized_mae": -0.2481325020474737,
+            "r2": 0.1342283665699887,
+            "rmse": -0.010900869787722013
+          },
+          "mae_percent_reduction_vs_ridge": 89.76625824207865,
+          "mist": {
+            "mae": 0.0009406735522275951,
+            "normalized_mae": 0.028288178625567453,
+            "r2": 0.9982930986714368,
+            "rmse": 0.0013756694424523622
+          },
+          "ridge": {
+            "mae": 0.009191882836983585,
+            "normalized_mae": 0.27642068067304115,
+            "r2": 0.8640647321014481,
+            "rmse": 0.012276539230174376
+          },
+          "unit": "hartree"
+        }
+      }
+    },
+    "full_test": {
+      "aggregate": {
+        "lower_is_better": true,
+        "metric": "mean-normalized-mae-across-12-targets",
+        "mist": 0.09506432328592,
+        "mist_minus_ridge": -0.27498423478573863,
+        "percent_reduction_vs_ridge": 74.3103111166532,
+        "ridge": 0.37004855807165865
+      },
+      "rows": 13389,
+      "targets": {
+        "alpha": {
+          "delta_mist_minus_ridge": {
+            "mae": -2.7278206131109366,
+            "normalized_mae": -0.33316861830225253,
+            "r2": 0.297398411685874,
+            "rmse": -3.505780171784007
+          },
+          "mae_percent_reduction_vs_ridge": 81.58853213493995,
+          "mist": {
+            "mae": 0.6155666764156991,
+            "normalized_mae": 0.07518364589980743,
+            "r2": 0.982752169804098,
+            "rmse": 1.0717296449808045
+          },
+          "ridge": {
+            "mae": 3.3433872895266354,
+            "normalized_mae": 0.40835226420205994,
+            "r2": 0.685353758118224,
+            "rmse": 4.577509816764811
+          },
+          "unit": "bohr^3"
+        },
+        "cv": {
+          "delta_mist_minus_ridge": {
+            "mae": -1.251986461406629,
+            "normalized_mae": -0.3080485985053753,
+            "r2": 0.24147878370641285,
+            "rmse": -1.686154840828596
+          },
+          "mae_percent_reduction_vs_ridge": 84.81809990522262,
+          "mist": {
+            "mae": 0.22409760886330485,
+            "normalized_mae": 0.05513873868986337,
+            "r2": 0.9934973242891736,
+            "rmse": 0.3258032143752294
+          },
+          "ridge": {
+            "mae": 1.4760840702699338,
+            "normalized_mae": 0.36318733719523866,
+            "r2": 0.7520185405827607,
+            "rmse": 2.0119580552038254
+          },
+          "unit": "cal/(mol K)"
+        },
+        "g298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.194489017923146,
+            "normalized_mae": -0.3288758210414728,
+            "r2": 0.2769917354297955,
+            "rmse": -19.203044470274918
+          },
+          "mae_percent_reduction_vs_ridge": 88.93859518478571,
+          "mist": {
+            "mae": 1.6410151751768856,
+            "normalized_mae": 0.04090269902416906,
+            "r2": 0.997770759820947,
+            "rmse": 1.8841868718283226
+          },
+          "ridge": {
+            "mae": 14.835504193100032,
+            "normalized_mae": 0.3697785200656418,
+            "r2": 0.7207790243911515,
+            "rmse": 21.08723134210324
+          },
+          "unit": "hartree"
+        },
+        "gap": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.009391225818446904,
+            "normalized_mae": -0.19753237046470717,
+            "r2": 0.14545033969459586,
+            "rmse": -0.010914850019388975
+          },
+          "mae_percent_reduction_vs_ridge": 60.51137028696424,
+          "mist": {
+            "mae": 0.006128544720396808,
+            "normalized_mae": 0.1289060650358369,
+            "r2": 0.9601829994643277,
+            "rmse": 0.009433142960857647
+          },
+          "ridge": {
+            "mae": 0.015519770538843711,
+            "normalized_mae": 0.3264384355005441,
+            "r2": 0.8147326597697319,
+            "rmse": 0.020347992980246622
+          },
+          "unit": "hartree"
+        },
+        "h298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.344113087135913,
+            "normalized_mae": -0.3326113009009573,
+            "r2": 0.2772552799093637,
+            "rmse": -19.32280264358298
+          },
+          "mae_percent_reduction_vs_ridge": 89.95109336379831,
+          "mist": {
+            "mae": 1.4907405962617597,
+            "normalized_mae": 0.03715774632534351,
+            "r2": 0.9980469558079901,
+            "rmse": 1.763574559751578
+          },
+          "ridge": {
+            "mae": 14.834853683397673,
+            "normalized_mae": 0.36976904722630083,
+            "r2": 0.7207916758986264,
+            "rmse": 21.086377203334557
+          },
+          "unit": "hartree"
+        },
+        "homo": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.004520567509124332,
+            "normalized_mae": -0.20435751034576244,
+            "r2": 0.1978326526770564,
+            "rmse": -0.005521258010108319
+          },
+          "mae_percent_reduction_vs_ridge": 52.17583803558749,
+          "mist": {
+            "mae": 0.004143533882100081,
+            "normalized_mae": 0.18731326685646793,
+            "r2": 0.9241086030307173,
+            "rmse": 0.006140502533567574
+          },
+          "ridge": {
+            "mae": 0.008664101391224413,
+            "normalized_mae": 0.39167077720223037,
+            "r2": 0.7262759503536609,
+            "rmse": 0.011661760543675893
+          },
+          "unit": "hartree"
+        },
+        "lumo": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.008519142243558483,
+            "normalized_mae": -0.1814609820932137,
+            "r2": 0.11834522411147275,
+            "rmse": -0.010382738196036873
+          },
+          "mae_percent_reduction_vs_ridge": 62.851309470016226,
+          "mist": {
+            "mae": 0.005035296503056042,
+            "normalized_mae": 0.10725373781215485,
+            "r2": 0.9755026185501939,
+            "rmse": 0.007339010940833366
+          },
+          "ridge": {
+            "mae": 0.013554438746614524,
+            "normalized_mae": 0.28871471990536857,
+            "r2": 0.8571573944387212,
+            "rmse": 0.01772174913687024
+          },
+          "unit": "hartree"
+        },
+        "mu": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.3183753750676858,
+            "normalized_mae": -0.20837645040138886,
+            "r2": 0.2684650319275026,
+            "rmse": -0.35418651065193363
+          },
+          "mae_percent_reduction_vs_ridge": 39.95513103864803,
+          "mist": {
+            "mae": 0.4784568885024821,
+            "normalized_mae": 0.3131496840012973,
+            "r2": 0.7758032006715276,
+            "rmse": 0.7342468405950063
+          },
+          "ridge": {
+            "mae": 0.7968322635701679,
+            "normalized_mae": 0.5215261344026861,
+            "r2": 0.507338168744025,
+            "rmse": 1.08843335124694
+          },
+          "unit": "D"
+        },
+        "r2": {
+          "delta_mist_minus_ridge": {
+            "mae": -73.84524973677924,
+            "normalized_mae": -0.26372636042103464,
+            "r2": 0.24059998630324886,
+            "rmse": -93.05031218422485
+          },
+          "mae_percent_reduction_vs_ridge": 68.43953685812744,
+          "mist": {
+            "mae": 34.05327372906133,
+            "normalized_mae": 0.12161575691054431,
+            "r2": 0.9640730307497981,
+            "rmse": 52.442444569559875
+          },
+          "ridge": {
+            "mae": 107.89852346584057,
+            "normalized_mae": 0.38534211733157897,
+            "r2": 0.7234730444465493,
+            "rmse": 145.49275675378473
+          },
+          "unit": "bohr^2"
+        },
+        "u0": {
+          "delta_mist_minus_ridge": {
+            "mae": -14.03818006966534,
+            "normalized_mae": -0.34990949138150823,
+            "r2": 0.2784851948021825,
+            "rmse": -20.009511998725237
+          },
+          "mae_percent_reduction_vs_ridge": 94.62790863368168,
+          "mist": {
+            "mae": 0.7969571243829455,
+            "normalized_mae": 0.019864602153685986,
+            "r2": 0.9992713805779946,
+            "rmse": 1.0771854744333453
+          },
+          "ridge": {
+            "mae": 14.835137194048286,
+            "normalized_mae": 0.3697740935351942,
+            "r2": 0.7207861857758121,
+            "rmse": 21.086697473158583
+          },
+          "unit": "hartree"
+        },
+        "u298": {
+          "delta_mist_minus_ridge": {
+            "mae": -13.792368542990694,
+            "normalized_mae": -0.34378437993801625,
+            "r2": 0.2781264231852514,
+            "rmse": -19.773790770238044
+          },
+          "mae_percent_reduction_vs_ridge": 92.97224833889949,
+          "mist": {
+            "mae": 1.0425620835282963,
+            "normalized_mae": 0.025986585140578305,
+            "r2": 0.9989181183369714,
+            "rmse": 1.3125857048916065
+          },
+          "ridge": {
+            "mae": 14.83493062651899,
+            "normalized_mae": 0.3697709650785945,
+            "r2": 0.72079169515172,
+            "rmse": 21.08637647512965
+          },
+          "unit": "hartree"
+        },
+        "zpve": {
+          "delta_mist_minus_ridge": {
+            "mae": -0.008245437572869045,
+            "normalized_mae": -0.24795893363317464,
+            "r2": 0.13394454187580007,
+            "rmse": -0.010895492656367195
+          },
+          "mae_percent_reduction_vs_ridge": 89.75619805960874,
+          "mist": {
+            "mae": 0.0009410450891896802,
+            "normalized_mae": 0.02829935158129112,
+            "r2": 0.9982951015607988,
+            "rmse": 0.0013757117401776275
+          },
+          "ridge": {
+            "mae": 0.009186482662058725,
+            "normalized_mae": 0.27625828521446577,
+            "r2": 0.8643505596849987,
+            "rmse": 0.012271204396544822
+          },
+          "unit": "hartree"
+        }
+      }
+    }
+  },
+  "dataset": {
+    "duplicate_clean_test_rows": 13370,
+    "full_test_rows": 13389,
+    "id": "deepchem-qm9-for-mist-28m-reconstruction",
+    "label_origin": "QM9 quantum-chemistry calculations",
+    "source_rows": 133885,
+    "source_sha256": "3e668f8c34e4bc392a90d417a50a5eed3b64b842a817a633024bdc054c68ccb4",
+    "split_counts": {
+      "test": 13389,
+      "train": 107108,
+      "validation": 13388
+    },
+    "split_status": "candidate-reconstructed-not-publisher-certified"
+  },
+  "highlighted_targets": [
+    "homo",
+    "lumo",
+    "gap"
+  ],
+  "models": {
+    "mist": {
+      "label": "Released fine-tuned MIST-28M",
+      "model_id": "mist-models/mist-26.9M-kkgx0omx-qm9",
+      "operation": "inference-only-no-retraining",
+      "revision": "65ceeed479609e9dcaef04e687556e2b39e25f23"
+    },
+    "random_forest": {
+      "candidate_scores": [
+        {
+          "candidate_id": "sqrt-leaf-1",
+          "mean_normalized_mae_across_12_targets": 0.384986538625033
+        },
+        {
+          "candidate_id": "sqrt-leaf-2",
+          "mean_normalized_mae_across_12_targets": 0.4033652294643438
+        },
+        {
+          "candidate_id": "sqrt-leaf-4",
+          "mean_normalized_mae_across_12_targets": 0.4311451315095814
+        },
+        {
+          "candidate_id": "fraction-0.25-leaf-1",
+          "mean_normalized_mae_across_12_targets": 0.35869808466905057
+        },
+        {
+          "candidate_id": "fraction-0.25-leaf-2",
+          "mean_normalized_mae_across_12_targets": 0.3582335180618727
+        },
+        {
+          "candidate_id": "fraction-0.25-leaf-4",
+          "mean_normalized_mae_across_12_targets": 0.3671745210854805
+        }
+      ],
+      "label": "ECFP4 + multi-output random forest",
+      "scope": "validation-only",
+      "selected_candidate": "fraction-0.25-leaf-2",
+      "selected_validation_mean_normalized_mae": 0.3582335180618727,
+      "test_evaluated": false
+    },
+    "ridge": {
+      "label": "ECFP4 + multi-output Ridge",
+      "parameters_sha256": "8c0c73105ff0c9e93643aab9b54f39ea9a1b33394e8635b86953299ade037939",
+      "selected_candidate": "alpha-10"
+    }
+  },
+  "provenance": {
+    "comparison_sha256": "45534119f79ea5708dd58cee050290fe8847cc9ea933fcf26acfc9207caa229e",
+    "execution_protocol_snapshot_sha256": "14b9d76ee63a3e116e1285df27ec352ccc55496deeb78d373b598cd1530acfe4",
+    "inference_fingerprint": "444e4dfede09a97573da2927334c8b701821f3bf0e4a71e4a4e0c1f0aefba11c",
+    "locked_ridge_metrics_sha256": "27a76672b56c3dffd34aa1c2f051d5e505933f3dc06b471b844a94ca0ea9fb6d",
+    "mist_metrics_sha256": "fe84b07b329039c2540b2e7cf23da2eb92b13f1f469a5096f5bdf40e0a0da2f3",
+    "model_audit_sha256": "56d0dd48697e4366dbbaff3eec083d1ee170b25ed10e9196fb2efedc0e981ca1",
+    "phase1_run_sha256": "82a0abba1b8c7ec8cea4a680eeb9f83c08ce3c5f3c140928b27d318ff45b97a4",
+    "phase2_run_sha256": "33bd8012d292818dcc05c03a6d1dedcb0cd6b80b414d1cc2a7728942d5bdf9ab",
+    "phase3_audit_run_sha256": "0660c6ef1c0e7184303957696a7d73aaf6d7a92ea2ead097e4bceadd2983dc1f",
+    "phase3_run_sha256": "5ca43007476bbf0b182f90be43beabab30434ecb8d143753d5f0764f53d908a0",
+    "reservation_status": "completed",
+    "rf_validation_attempt_sha256": "a7904e43eeae12edfc9be06a28c70d3a778002d421862151f4bcf50b71780ef1",
+    "rf_validation_run_sha256": "7dad8bf62d4045ddda8a5495d3cd1afe1af65ed29bda5dd906cb4e78f00482d7",
+    "runtime_freeze_canonical_sha256": "1f668948dc94738e74e97dc0e8e14530f090415af5b7ebdc14f7354340ea1bc8",
+    "test_inference_count": 1,
+    "test_inference_retries": 0
+  },
+  "question": "On the candidate QM9 split reconstructed from public MIST code, how does the released fine-tuned MIST-28M predictor compare with locked ECFP Ridge?",
+  "rights": {
+    "aggregate_only_publication_authorized_by_repository_owner": true,
+    "model_card_restrictions": [
+      "research-use-only",
+      "no-redistribution-without-permission",
+      "no-commercial-use-without-licensing-agreement"
+    ],
+    "policy": "apply-the-stricter-model-card-restrictions",
+    "publication_rights_review_open": false,
+    "weights_redistributed": false
+  },
+  "runtime_resources": {
+    "phase2_locked_classical": {
+      "peak_rss_gib": 0.3721199035644531,
+      "runtime_seconds": 333.4031530569773
+    },
+    "phase2_random_forest_validation_only": {
+      "maximum_candidate_peak_rss_gib": 6.547077178955078,
+      "runtime_seconds": 1026.543676347006
+    },
+    "phase3_mist": {
+      "batch_size": 128,
+      "device": "cuda",
+      "device_name": "NVIDIA RTX PRO 2000 Blackwell Generation Laptop GPU",
+      "gpu_peak_memory_allocated_bytes": 205038592,
+      "gpu_peak_memory_reserved_bytes": 346030080,
+      "orchestrator_peak_rss_gib": 0.7814979553222656,
+      "total_runtime_seconds": 23.857965409988537,
+      "worker_peak_rss_gib": 1.2622833251953125,
+      "worker_runtime_seconds": 9.019580934982514
+    }
+  },
+  "schema_version": 1,
+  "scientific_status": "preliminary-local-point-estimates",
+  "target_order": [
+    "mu",
+    "alpha",
+    "homo",
+    "lumo",
+    "gap",
+    "r2",
+    "zpve",
+    "u0",
+    "u298",
+    "h298",
+    "g298",
+    "cv"
+  ],
+  "units": {
+    "alpha": "bohr^3",
+    "cv": "cal/(mol K)",
+    "g298": "hartree",
+    "gap": "hartree",
+    "h298": "hartree",
+    "homo": "hartree",
+    "lumo": "hartree",
+    "mu": "D",
+    "r2": "bohr^2",
+    "u0": "hartree",
+    "u298": "hartree",
+    "zpve": "hartree"
+  }
+}

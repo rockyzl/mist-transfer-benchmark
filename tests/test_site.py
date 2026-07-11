@@ -1,7 +1,11 @@
 import hashlib
 import json
+import shutil
+import subprocess
 from html.parser import HTMLParser
 from pathlib import Path
+
+import pytest
 
 from scripts.build_demo_data import build_payload
 
@@ -73,12 +77,51 @@ def test_static_page_uses_only_local_runtime_assets():
     assert parser.assets == ["./styles.css", "./app.js"]
     for asset in parser.assets:
         assert (SITE_ROOT / asset.removeprefix("./")).is_file()
-    assert 'new URL("./demo-data.json", document.baseURI)' in (
-        SITE_ROOT / "app.js"
-    ).read_text(encoding="utf-8")
-    assert html.count("no scientific result") >= 3
-    assert "MIST is not executed" in html
+    script = (SITE_ROOT / "app.js").read_text(encoding="utf-8")
+    assert 'new URL("./qm9-results.json", document.baseURI)' in script
+    assert 'new URL("./demo-data.json", document.baseURI)' in script
+    assert (SITE_ROOT / "qm9-results.json").is_file()
+    assert "Preliminary local QM9 point estimates" in html
+    assert "This static page does not run inference" in html
+    assert "MIST is absent" in html
     assert "https://github.com/BattModels/mist-demo" in html
+
+
+def test_qm9_result_ui_is_distinct_from_synthetic_redox_explorer():
+    html = (SITE_ROOT / "index.html").read_text(encoding="utf-8")
+    script = (SITE_ROOT / "app.js").read_text(encoding="utf-8")
+
+    for element_id in (
+        "qm9-results",
+        "qm9-results-panel",
+        "qm9-aggregate-mist",
+        "qm9-aggregate-ridge",
+        "qm9-aggregate-reduction",
+        "qm9-highlight-bars",
+        "qm9-target-rows",
+        "qm9-provenance",
+        "explorer",
+    ):
+        assert f'id="{element_id}"' in html
+    assert 'data-qm9-cohort="full_test"' in html
+    assert 'data-qm9-cohort="duplicate_clean_test"' in html
+    assert "candidate split" in html
+    assert "aggregate-only result" in html
+    assert "Random forest remains validation-only and has no test score" in html
+    assert "synthetic redox track" in html.lower()
+    assert "Do not rank models from these numbers" in html
+    assert "renderQm9Results" in script
+    assert "Run inference" not in html
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_site_javascript_has_valid_syntax():
+    subprocess.run(
+        ["node", "--check", str(SITE_ROOT / "app.js")],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def test_pages_workflow_has_least_privilege_and_official_actions():
