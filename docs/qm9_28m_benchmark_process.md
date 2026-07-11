@@ -874,6 +874,7 @@ Reviewer and review date:
 | 2026-07-10 | Phase 3 one-shot inference | Ran the released checkpoint once on all 13,389 candidate test rows and compared its saved predictions with the already locked Ridge result. | Zero retries/drops; MIST aggregate NMAE `0.0950643233` full and `0.0951035618` clean versus Ridge `0.3700485581` / `0.3700476436`; run `5ca43007…08a0`. |
 | 2026-07-10 | Phase 4 aggregate presentation | Generated a tracked aggregate-only JSON, focused result report, and local static QM9 results view from authenticated Phase 2/3 aggregate artifacts. | Summary `d21274ad…d76c`; no row IDs, labels, predictions, source data, or weights included; no metric or inference change; deployed Pages URL remains stale until a future push. |
 | 2026-07-11 | Aggregate-only publication authorization | Recorded repository-owner authorization to deploy the static aggregate report and demo. | Regenerated summary `3079c647…f910`; raw data, row-level predictions, and weights remain private; stricter model-card restrictions remain in effect. |
+| 2026-07-11 | GitHub Pages deployment | Merged PR #3 into `main` and verified the deployed aggregate JSON and static QM9 section. | Pages workflow `29160041138` succeeded; the live JSON SHA-256 is `3079c647…f910`; no model runs in the browser. |
 
 ## Change control
 

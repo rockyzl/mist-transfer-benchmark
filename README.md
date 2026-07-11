@@ -3,9 +3,9 @@
 [**Live benchmark explorer**](https://rockyzl.github.io/mist-transfer-benchmark/)
 · [**Official MIST notebooks**](https://github.com/BattModels/mist-demo)
 
-> **Site status:** This checkout includes an owner-authorized aggregate-only QM9 results view plus
-> a separate synthetic redox explorer. The linked GitHub Pages deployment will update after this
-> branch is merged to `main`. The browser does not execute MIST.
+> **Site status:** The [GitHub Pages explorer](https://rockyzl.github.io/mist-transfer-benchmark/)
+> now serves the owner-authorized aggregate-only QM9 results view alongside the separate synthetic
+> redox explorer. The browser does not execute MIST.
 
 > Does large-scale SMILES pretraining learn chemistry that transfers to new molecular
 > families, or does it mainly provide an expensive way to encode molecular similarity?
