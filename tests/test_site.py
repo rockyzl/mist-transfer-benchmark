@@ -74,7 +74,12 @@ def test_static_page_uses_only_local_runtime_assets():
     parser = _AssetParser()
     parser.feed(html)
 
-    assert parser.assets == ["./styles.css", "./app.js"]
+    assert parser.assets == [
+        "./styles.css",
+        "./live-config.js",
+        "./live-api.js",
+        "./app.js",
+    ]
     for asset in parser.assets:
         assert (SITE_ROOT / asset.removeprefix("./")).is_file()
     script = (SITE_ROOT / "app.js").read_text(encoding="utf-8")
@@ -85,6 +90,41 @@ def test_static_page_uses_only_local_runtime_assets():
     assert "This static page does not run inference" in html
     assert "MIST is absent" in html
     assert "https://github.com/BattModels/mist-demo" in html
+
+
+def test_live_prediction_ui_has_explicit_private_api_boundary():
+    html = (SITE_ROOT / "index.html").read_text(encoding="utf-8")
+    app = (SITE_ROOT / "app.js").read_text(encoding="utf-8")
+    config = (SITE_ROOT / "live-config.js").read_text(encoding="utf-8")
+    contract = (SITE_ROOT / "live-api.js").read_text(encoding="utf-8")
+
+    for element_id in (
+        "live-predict",
+        "live-api-status",
+        "live-predict-form",
+        "live-smiles-input",
+        "live-predict-button",
+        "live-form-error",
+        "live-prediction-results",
+        "live-focus-grid",
+        "live-prediction-rows",
+    ):
+        assert f'id="{element_id}"' in html
+    for example in ("C", "CCO", "CC(=O)O", "c1ccncc1"):
+        assert f'data-example-smiles="{example}"' in html
+    assert '{"smiles":"CCO"}' in html
+    assert "private API required" in html
+    assert "No measured truth" in html
+    assert "all 12" in html
+    assert 'apiBaseUrl: ""' in config
+    assert "apiKey:" not in config
+    assert "token:" not in config
+    assert "Authorization" not in config
+    assert "credentials: \"omit\"" in app
+    assert "validatePredictionResponse" in app
+    assert 'modelOrder = Object.freeze(["ridge", "xgboost", "mlp", "mist"])' in contract
+    assert "model.safetensors" not in html + app + config + contract
+    assert "data/private" not in html + app + config + contract
 
 
 def test_qm9_result_ui_is_distinct_from_synthetic_redox_explorer():
@@ -116,8 +156,62 @@ def test_qm9_result_ui_is_distinct_from_synthetic_redox_explorer():
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_site_javascript_has_valid_syntax():
+    for name in ("live-config.js", "live-api.js", "app.js"):
+        subprocess.run(
+            ["node", "--check", str(SITE_ROOT / name)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
+def test_live_prediction_client_contract_accepts_api_shape_and_rejects_missing_model():
+    script = r"""
+const c = require('./site/live-api.js');
+const predictions = Object.fromEntries(c.modelOrder.map((model, modelIndex) => [
+  model,
+  Object.fromEntries(c.targetOrder.map((target, targetIndex) => [
+    target,
+    {value: modelIndex + targetIndex / 100, unit: c.units[target]},
+  ])),
+]));
+const response = {
+  schema_version: c.schemaVersion,
+  targets: [...c.targetOrder],
+  units: [...c.unitOrder],
+  predictions,
+};
+if (JSON.stringify(c.buildRequest('  CCO  ')) !== '{"smiles":"CCO"}') process.exit(10);
+if (c.validatePredictionResponse(response) !== response) process.exit(11);
+const endpoint = c.buildPredictionEndpoint(
+  {apiBaseUrl: 'https://api.example.test/private', predictPath: 'v1/predict'},
+  'https://sciencesloop.com/qm9-demo/',
+);
+if (endpoint.href !== 'https://api.example.test/private/v1/predict') process.exit(12);
+if (c.buildPredictionEndpoint({apiBaseUrl: ''}, 'https://sciencesloop.com/') !== null) {
+  process.exit(13);
+}
+const missingMist = {...response, predictions: {...predictions}};
+delete missingMist.predictions.mist;
+try {
+  c.validatePredictionResponse(missingMist);
+  process.exit(14);
+} catch {
+  // Expected: every response must contain all four model keys.
+}
+const missingVersion = {...response};
+delete missingVersion.schema_version;
+try {
+  c.validatePredictionResponse(missingVersion);
+  process.exit(15);
+} catch {
+  // Expected: the HTTP response contract is versioned.
+}
+"""
     subprocess.run(
-        ["node", "--check", str(SITE_ROOT / "app.js")],
+        ["node", "-e", script],
+        cwd=REPO_ROOT,
         check=True,
         capture_output=True,
         text=True,

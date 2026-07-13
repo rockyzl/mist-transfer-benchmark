@@ -1,0 +1,92 @@
+protocol_id = "qm9-extended-comparison-v1"
+seed = 20260712
+target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
+
+[xgboost]
+early_stopping_rounds = 35
+
+[[xgboost.candidates]]
+id = "shallow_fast"
+max_depth = 4
+learning_rate = 0.08
+n_estimators = 650
+subsample = 0.90
+colsample_bytree = 0.90
+min_child_weight = 1.0
+
+[[xgboost.candidates]]
+id = "balanced_d6"
+max_depth = 6
+learning_rate = 0.06
+n_estimators = 750
+subsample = 0.90
+colsample_bytree = 0.85
+min_child_weight = 1.0
+
+[[xgboost.candidates]]
+id = "balanced_d8"
+max_depth = 8
+learning_rate = 0.045
+n_estimators = 900
+subsample = 0.85
+colsample_bytree = 0.85
+min_child_weight = 1.0
+
+[[xgboost.candidates]]
+id = "deep_slow"
+max_depth = 10
+learning_rate = 0.03
+n_estimators = 1100
+subsample = 0.85
+colsample_bytree = 0.90
+min_child_weight = 1.0
+
+[[xgboost.candidates]]
+id = "regularized_d8"
+max_depth = 8
+learning_rate = 0.04
+n_estimators = 950
+subsample = 0.80
+colsample_bytree = 0.80
+min_child_weight = 5.0
+reg_lambda = 2.0
+
+[mlp]
+batch_size = 512
+max_epochs = 28
+patience = 4
+
+[[mlp.candidates]]
+id = "compact"
+hidden_dims = [384, 192]
+dropout = 0.05
+learning_rate = 0.001
+weight_decay = 0.00001
+
+[[mlp.candidates]]
+id = "wide"
+hidden_dims = [768, 384]
+dropout = 0.10
+learning_rate = 0.001
+weight_decay = 0.00001
+
+[[mlp.candidates]]
+id = "wide_low_dropout"
+hidden_dims = [768, 384]
+dropout = 0.02
+learning_rate = 0.0007
+weight_decay = 0.00001
+
+[[mlp.candidates]]
+id = "deep"
+hidden_dims = [768, 384, 192]
+dropout = 0.08
+learning_rate = 0.0007
+weight_decay = 0.00003
+
+[[mlp.candidates]]
+id = "large_regularized"
+hidden_dims = [1024, 512, 256]
+dropout = 0.12
+learning_rate = 0.0005
+weight_decay = 0.00005

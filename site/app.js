@@ -3,6 +3,8 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const state = {
   data: null,
+  liveEndpoint: null,
+  liveAbortController: null,
   qm9: null,
   qm9Cohort: "full_test",
   split: "scaffold",
@@ -11,6 +13,20 @@ const state = {
 };
 
 const elements = {
+  liveApiStatus: document.querySelector("#live-api-status"),
+  liveApiStatusTitle: document.querySelector("#live-api-status-title"),
+  liveApiStatusDetail: document.querySelector("#live-api-status-detail"),
+  liveForm: document.querySelector("#live-predict-form"),
+  liveSmilesInput: document.querySelector("#live-smiles-input"),
+  livePredictButton: document.querySelector("#live-predict-button"),
+  liveClearButton: document.querySelector("#live-clear-button"),
+  liveExampleButtons: [...document.querySelectorAll("[data-example-smiles]")],
+  liveFormError: document.querySelector("#live-form-error"),
+  liveShell: document.querySelector("#live-predict-shell"),
+  liveResults: document.querySelector("#live-prediction-results"),
+  liveResultSmiles: document.querySelector("#live-result-smiles"),
+  liveFocusGrid: document.querySelector("#live-focus-grid"),
+  livePredictionRows: document.querySelector("#live-prediction-rows"),
   qm9Panel: document.querySelector("#qm9-results-panel"),
   qm9AggregateMist: document.querySelector("#qm9-aggregate-mist"),
   qm9AggregateRidge: document.querySelector("#qm9-aggregate-ridge"),
@@ -247,6 +263,231 @@ function showQm9Error(error) {
   elements.qm9Panel.setAttribute("aria-busy", "false");
 }
 
+function setLiveApiStatus(kind, title, detail) {
+  elements.liveApiStatus.className = `live-api-status is-${kind}`;
+  elements.liveApiStatusTitle.textContent = title;
+  elements.liveApiStatusDetail.textContent = detail;
+}
+
+function showLiveFormError(message) {
+  elements.liveFormError.textContent = message;
+  elements.liveFormError.hidden = !message;
+}
+
+function setLiveLoading(loading) {
+  elements.liveResults.setAttribute("aria-busy", String(loading));
+  elements.liveSmilesInput.readOnly = loading;
+  elements.livePredictButton.disabled = loading || !state.liveEndpoint;
+  elements.livePredictButton.textContent = loading ? "Predicting…" : "Predict properties";
+  for (const button of elements.liveExampleButtons) button.disabled = loading;
+}
+
+function readyLiveStatus() {
+  if (!state.liveEndpoint) {
+    setLiveApiStatus(
+      "offline",
+      "Prediction API not configured",
+      "The static page is ready, but it cannot run private models by itself.",
+    );
+    return;
+  }
+  const endpoint = new URL(state.liveEndpoint);
+  setLiveApiStatus(
+    "ready",
+    "Private prediction API configured",
+    `Requests will be sent to ${endpoint.origin}${endpoint.pathname}.`,
+  );
+}
+
+function initializeLiveDemo() {
+  if (!globalThis.LiveDemoContract) {
+    setLiveApiStatus("error", "Prediction client unavailable", "The local contract script did not load.");
+    return;
+  }
+  try {
+    const config = globalThis.MIST_TRANSFER_CONFIG || {};
+    const endpoint = globalThis.LiveDemoContract.buildPredictionEndpoint(
+      config,
+      document.baseURI,
+    );
+    state.liveEndpoint = endpoint?.href || null;
+    elements.livePredictButton.disabled = !state.liveEndpoint;
+    readyLiveStatus();
+  } catch (error) {
+    state.liveEndpoint = null;
+    elements.livePredictButton.disabled = true;
+    setLiveApiStatus(
+      "error",
+      "Prediction API configuration rejected",
+      error instanceof Error ? error.message : "Check site/live-config.js.",
+    );
+  }
+}
+
+function renderLiveFocus(data) {
+  const contract = globalThis.LiveDemoContract;
+  const fragment = document.createDocumentFragment();
+  for (const target of ["homo", "lumo", "gap"]) {
+    const card = document.createElement("article");
+    card.className = "live-focus-card";
+    const header = document.createElement("div");
+    const title = document.createElement("h4");
+    title.textContent = target.toUpperCase();
+    const unit = document.createElement("span");
+    unit.textContent = contract.units[target];
+    header.append(title, unit);
+    const list = document.createElement("dl");
+    for (const model of contract.modelOrder) {
+      const row = document.createElement("div");
+      const label = document.createElement("dt");
+      label.textContent = contract.modelLabels[model];
+      const value = document.createElement("dd");
+      value.textContent = formatQm9Metric(data.predictions[model][target].value);
+      row.append(label, value);
+      list.append(row);
+    }
+    card.append(header, list);
+    fragment.append(card);
+  }
+  elements.liveFocusGrid.replaceChildren(fragment);
+}
+
+function renderLiveTable(data) {
+  const contract = globalThis.LiveDemoContract;
+  const fragment = document.createDocumentFragment();
+  for (const target of contract.targetOrder) {
+    const row = document.createElement("tr");
+    if (["homo", "lumo", "gap"].includes(target)) row.className = "is-highlighted";
+    const values = [
+      target.toUpperCase(),
+      contract.units[target],
+      ...contract.modelOrder.map((model) =>
+        formatQm9Metric(data.predictions[model][target].value),
+      ),
+    ];
+    for (const [index, value] of values.entries()) {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      cell.textContent = value;
+      if (index === 0) cell.setAttribute("scope", "row");
+      row.append(cell);
+    }
+    fragment.append(row);
+  }
+  elements.livePredictionRows.replaceChildren(fragment);
+}
+
+function renderLivePrediction(data, requestedSmiles) {
+  elements.liveResultSmiles.textContent = requestedSmiles;
+  elements.liveResultSmiles.title = requestedSmiles;
+  renderLiveFocus(data);
+  renderLiveTable(data);
+  elements.liveShell.classList.remove("is-empty");
+  elements.liveResults.hidden = false;
+}
+
+async function responseErrorMessage(response) {
+  let detail = "";
+  try {
+    const payload = await response.json();
+    if (typeof payload?.detail === "string") detail = payload.detail;
+    else if (typeof payload?.message === "string") detail = payload.message;
+  } catch {
+    // The HTTP status remains sufficient when the body is not JSON.
+  }
+  return `Prediction API returned HTTP ${response.status}${detail ? `: ${detail}` : "."}`;
+}
+
+async function requestLivePrediction(event) {
+  event.preventDefault();
+  showLiveFormError("");
+  if (!state.liveEndpoint) {
+    showLiveFormError("Configure a private prediction API before submitting a molecule.");
+    return;
+  }
+
+  let request;
+  try {
+    request = globalThis.LiveDemoContract.buildRequest(elements.liveSmilesInput.value);
+  } catch (error) {
+    showLiveFormError(error instanceof Error ? error.message : "Enter a valid SMILES string.");
+    elements.liveSmilesInput.focus();
+    return;
+  }
+
+  state.liveAbortController?.abort();
+  const controller = new AbortController();
+  state.liveAbortController = controller;
+  const configuredTimeout = Number(globalThis.MIST_TRANSFER_CONFIG?.requestTimeoutMs);
+  const timeoutMs = Number.isFinite(configuredTimeout)
+    ? Math.min(Math.max(configuredTimeout, 5_000), 120_000)
+    : 45_000;
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  elements.liveShell.classList.add("is-empty");
+  elements.liveResults.hidden = true;
+  setLiveLoading(true);
+  setLiveApiStatus(
+    "loading",
+    "Predicting four model outputs…",
+    "The private backend validates the SMILES and returns all 12 properties.",
+  );
+
+  try {
+    const response = await fetch(state.liveEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(request),
+      credentials: "omit",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(await responseErrorMessage(response));
+    const payload = await response.json();
+    const validated = globalThis.LiveDemoContract.validatePredictionResponse(payload);
+    renderLivePrediction(validated, request.smiles);
+    setLiveApiStatus(
+      "success",
+      "Prediction complete",
+      "All four models and all 12 native-unit properties passed the browser contract.",
+    );
+  } catch (error) {
+    if (controller.signal.aborted && !timedOut) return;
+    const message = timedOut
+      ? `Prediction timed out after ${Math.round(timeoutMs / 1_000)} seconds.`
+      : error instanceof TypeError
+        ? "Prediction request failed. Check that the private API is running and allows this site origin."
+        : error instanceof Error
+          ? error.message
+          : "Prediction request failed.";
+    showLiveFormError(message);
+    setLiveApiStatus("error", "Prediction unavailable", message);
+  } finally {
+    clearTimeout(timeout);
+    if (state.liveAbortController === controller) {
+      state.liveAbortController = null;
+      setLiveLoading(false);
+    }
+  }
+}
+
+function clearLivePrediction() {
+  state.liveAbortController?.abort();
+  state.liveAbortController = null;
+  elements.liveForm.reset();
+  elements.liveShell.classList.add("is-empty");
+  elements.liveResults.hidden = true;
+  elements.liveFocusGrid.replaceChildren();
+  elements.livePredictionRows.replaceChildren();
+  showLiveFormError("");
+  setLiveLoading(false);
+  readyLiveStatus();
+  elements.liveSmilesInput.focus();
+}
+
 function selectedData() {
   const split = state.data.splits[state.split];
   return { split, model: split.models[state.model] };
@@ -470,6 +711,18 @@ function showError(error) {
   elements.resultTitle.textContent = "Demo unavailable";
   elements.resultsPanel.setAttribute("aria-busy", "false");
 }
+
+elements.liveForm.addEventListener("submit", requestLivePrediction);
+elements.liveClearButton.addEventListener("click", clearLivePrediction);
+elements.liveSmilesInput.addEventListener("input", () => showLiveFormError(""));
+for (const button of elements.liveExampleButtons) {
+  button.addEventListener("click", () => {
+    elements.liveSmilesInput.value = button.dataset.exampleSmiles;
+    showLiveFormError("");
+    elements.liveSmilesInput.focus();
+  });
+}
+initializeLiveDemo();
 
 elements.splitSelect.addEventListener("change", (event) => {
   state.split = event.target.value;
