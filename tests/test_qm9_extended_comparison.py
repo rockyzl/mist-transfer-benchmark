@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -59,3 +58,32 @@ def test_every_method_has_all_twelve_targets_in_both_cohorts():
             assert len(metrics["per_target"]) == 12
             assert len(metrics["target_order"]) == 12
             assert metrics["mean_normalized_mae_across_12_targets"] >= 0
+
+
+def test_postspecified_traditional_ensemble_keeps_mist_out_of_primary_blend():
+    result = json.loads(
+        (
+            ROOT
+            / "results/qm9-traditional-ensemble-correction-v1/aggregate_metrics.json"
+        ).read_text()
+    )
+    assert result["status"] == (
+        "post-specified-conceptual-correction-after-initial-test-report"
+    )
+    assert result["selection_uses_test_labels"] is False
+    assert result["weights_selected_from"] == "validation-only"
+    selection = result["traditional_ensemble_selection"]
+    assert set(selection["weights"]) == {"engineered_ridge", "xgboost", "mlp"}
+    assert "mist" not in selection["weights"]
+    assert sum(selection["weights"].values()) == pytest.approx(1.0)
+    assert selection["validation_mean_normalized_mae"] == pytest.approx(
+        0.08753979010627626
+    )
+    assert result["leaderboard"]["full_test"][0] == {
+        "mean_normalized_mae": pytest.approx(0.08739987257697619),
+        "model": "traditional_ensemble",
+        "rank": 1,
+    }
+    assert result["second_layer_all_model_ensemble"]["metrics"]["full_test"][
+        "mean_normalized_mae_across_12_targets"
+    ] == pytest.approx(0.08115898007288892)

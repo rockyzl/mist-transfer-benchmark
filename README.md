@@ -105,14 +105,17 @@ private or real redox dataset is bundled. See
 
 ### Preliminary QM9 result
 
-The expanded independent comparison now includes tuned XGBoost, MLP, and a
-validation-selected ensemble using count ECFP4 plus 17 global molecular
-descriptors. On the same 13,389-row candidate test cohort, mean normalized MAE
-was `0.081159` for the ensemble, `0.094336` for XGBoost, `0.095064` for the
-released fine-tuned MIST checkpoint, `0.100364` for MLP, and `0.370049` for the
-original locked binary-ECFP Ridge. XGBoost and MIST should be read as near
-parity in this single point estimate; the ensemble result indicates
-complementary errors. See the
+The expanded independent comparison includes tuned XGBoost, MLP, engineered
+Ridge, and validation-selected ensembles using count ECFP4 plus 17 global
+molecular descriptors. On the same 13,389-row candidate test cohort, mean
+normalized MAE was `0.087400` for the traditional-only XGBoost/MLP/Ridge
+ensemble, `0.094336` for XGBoost, `0.095064` for the released fine-tuned MIST
+checkpoint, `0.100364` for MLP, and `0.149839` for engineered Ridge. XGBoost
+and MIST should be read as near parity in this single point estimate. As a
+second-layer systems result, adding MIST to the ensemble improves the score to
+`0.081159`, indicating complementary errors. The traditional-only reporting
+correction is explicitly post-specified because it was made after the first
+test report; its weights still use validation labels only. See the
 [`extended comparison report`](docs/qm9_extended_comparison_v1.md) for the
 training process, feature/hyperparameter selection, runtime, per-target scope,
 and limitations.
