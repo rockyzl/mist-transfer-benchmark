@@ -46,6 +46,11 @@ def _protocol(*, external: bool = False):
             "released_qm9_mist_reuse_forbidden": True,
         },
         "bootstrap": {"samples": 12, "confidence": 0.95},
+        "resource_instrumentation": {
+            "enabled": True,
+            "process_rss_method": "resource.getrusage-RUSAGE_SELF-ru_maxrss",
+            "gpu_policy": "null-with-reason-unless-truthful-backend-telemetry",
+        },
         "models": {
             "engineered_ridge": {
                 "enabled": True,
@@ -171,9 +176,20 @@ def test_traditional_ensemble_summary_and_paired_delta_are_written(tmp_path):
     assert "traditional_ensemble" in cell["models"]
     assert "all_model_ensemble" not in cell["models"]
     assert "engineered_ridge" in cell["paired_delta_traditional_ensemble_minus_model"]
+    resource = cell["models"]["engineered_ridge"]["resource_observation"]
+    assert resource["process_peak_rss"]["bytes"] > 0
+    assert resource["gpu_memory"]["peak_allocated_bytes"] is None
+    assert "misleading" in resource["gpu_memory"]["reason"]
+    assert resource["test_inference"]["rows_per_second"] > 0
+    assert resource["test_inference"]["milliseconds_per_row"] > 0
+    assert resource["model_artifact"]["bytes"] is None
     summary = json.loads((tmp_path / "run/summary.json").read_text())
     assert set(summary["methods"]) == {"engineered_ridge", "traditional_ensemble"}
     assert len(summary["methods"]["traditional_ensemble"]["cells"]) == 2
+    cost = summary["methods"]["engineered_ridge"]["cost_summary"]
+    assert cost["training_or_refit_seconds_sum"] > 0
+    assert cost["effective_test_rows_per_second"] > 0
+    assert cost["peak_process_rss_bytes_max"] > 0
 
 
 def test_external_mode_requires_every_cell_and_denies_released_qm9(tmp_path):
@@ -257,6 +273,7 @@ def test_eligible_external_predictions_join_all_model_layer_and_strata(tmp_path)
         }
         identity = {
             "prediction_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "prediction_bytes": path.stat().st_size,
             "provenance": provenance,
             "provenance_sha256": canonical_hash(provenance),
         }

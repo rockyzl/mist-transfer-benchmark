@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import resource
+import sys
 import tempfile
 import time
 from collections.abc import Callable, Sequence
@@ -95,6 +97,43 @@ class ArrayTargetLoader:
 class ExternalPredictionArtifact:
     path: Path
     provenance: dict[str, object]
+
+
+def _process_peak_rss() -> dict[str, object]:
+    """Return the process-wide cumulative RSS high-water mark from getrusage."""
+
+    raw = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    multiplier = 1 if sys.platform == "darwin" else 1024
+    return {
+        "bytes": int(raw * multiplier),
+        "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss",
+        "semantics": "cumulative-process-high-water-mark-not-model-isolated",
+        "platform_unit_interpretation": "bytes-on-macos-kibibytes-elsewhere",
+    }
+
+
+def _gpu_memory_observation(family: str) -> dict[str, object]:
+    """Avoid attributing CUDA allocator metrics to CPU/sklearn backends."""
+
+    return {
+        "peak_allocated_bytes": None,
+        "peak_reserved_bytes": None,
+        "available": False,
+        "reason": (
+            f"{family}-uses-a-CPU-or-non-torch-backend; "
+            "torch-CUDA-allocator-metrics-would-be-misleading"
+        ),
+    }
+
+
+def _inference_observation(rows: int, seconds: float) -> dict[str, float | int]:
+    elapsed = max(float(seconds), np.finfo(np.float64).eps)
+    return {
+        "rows": int(rows),
+        "seconds": float(seconds),
+        "rows_per_second": float(rows / elapsed),
+        "milliseconds_per_row": float(1000.0 * elapsed / rows),
+    }
 
 
 @dataclass(frozen=True)
@@ -454,15 +493,23 @@ def select_model_parameters(
     selection_started = time.perf_counter()
     for candidate in candidates:
         model = _new_model(family, candidate, seed)
-        started = time.perf_counter()
+        fit_started = time.perf_counter()
         model.fit(x[split.train], y_train)
+        fit_seconds = time.perf_counter() - fit_started
+        inference_started = time.perf_counter()
         prediction = np.asarray(model.predict(x[split.validation]), dtype=np.float64)
+        inference_seconds = time.perf_counter() - inference_started
         score = _score(y_validation, prediction, train_scale)
         records.append(
             {
                 "parameters": candidate,
                 "validation_score": score,
-                "fit_predict_seconds": time.perf_counter() - started,
+                "training_seconds": fit_seconds,
+                "validation_inference": _inference_observation(
+                    len(split.validation), inference_seconds
+                ),
+                "process_peak_rss": _process_peak_rss(),
+                "gpu_memory": _gpu_memory_observation(family),
             }
         )
         if best is None or score < best[0]:
@@ -607,6 +654,16 @@ def evaluate_frozen_model(
                 "frozen_refit": refit_seconds,
                 "test_inference": inference_seconds,
             },
+            "resource_observation": {
+                "schema_version": "qm9-paper-resource-observation-v1",
+                "process_peak_rss": _process_peak_rss(),
+                "gpu_memory": _gpu_memory_observation(family),
+                "test_inference": _inference_observation(len(split.test), inference_seconds),
+                "model_artifact": {
+                    "bytes": None,
+                    "reason": "fitted-model-is-not-persisted-by-paper-evaluation-phase-a",
+                },
+            },
             "test_metrics": metrics,
             "test_bootstrap_ci": ci,
         },
@@ -716,6 +773,7 @@ def load_external_predictions(
         raise PaperEvaluationError("external test predictions do not match frozen row order")
     identity = {
         "prediction_sha256": _file_sha256(path),
+        "prediction_bytes": path.stat().st_size,
         "provenance": artifact.provenance,
         "provenance_sha256": canonical_hash(artifact.provenance),
     }
@@ -740,6 +798,23 @@ def evaluate_external_predictions(
     return {
         "source": "external-frozen-predictions-no-fine-tuning-performed-by-this-pipeline",
         "artifact_identity": identity,
+        "resource_observation": {
+            "schema_version": "qm9-paper-resource-observation-v1",
+            "process_peak_rss": None,
+            "gpu_memory": {
+                "peak_allocated_bytes": None,
+                "peak_reserved_bytes": None,
+                "available": False,
+                "reason": "external-predictions-do-not-carry-runtime-GPU-telemetry",
+            },
+            "test_inference": None,
+            "training_seconds": None,
+            "model_artifact": {
+                "bytes": int(identity.get("prediction_bytes", 0)) or None,
+                "reason": "external-prediction-artifact-size-not-model-weight-size",
+            },
+            "reason": "runtime-resource-use-cannot-be-reconstructed-from-saved-predictions",
+        },
         "test_evaluations_after_freeze": 1,
         "test_metrics": native_metrics(y_test, prediction, train_target_scale),
         "test_bootstrap_ci": bootstrap_confidence_intervals(
@@ -773,6 +848,13 @@ def run_protocol(
         raise PaperEvaluationError(f"protocol schema must be {SCHEMA_VERSION}")
     if list(protocol.get("target_order", [])) != list(TARGET_COLUMNS):
         raise PaperEvaluationError("target order differs from the frozen twelve-target contract")
+    resource_contract = protocol.get("resource_instrumentation", {})
+    if resource_contract != {
+        "enabled": True,
+        "process_rss_method": "resource.getrusage-RUSAGE_SELF-ru_maxrss",
+        "gpu_policy": "null-with-reason-unless-truthful-backend-telemetry",
+    }:
+        raise PaperEvaluationError("resource instrumentation contract is not frozen")
     if target_loader.rows != len(smiles) or x.shape[0] != len(smiles):
         raise PaperEvaluationError("features, targets, and SMILES row counts differ")
     if not feature_schema:
@@ -1071,12 +1153,27 @@ def run_protocol(
                     bootstrap_seed=int(seed) + 950_000,
                     bootstrap_confidence=float(protocol["bootstrap"]["confidence"]),
                 )
+            ensemble_inference_started = time.perf_counter()
             traditional_prediction = blend_predictions(
                 selection_payload["traditional_ensemble"], predictions
             )
+            ensemble_inference_seconds = time.perf_counter() - ensemble_inference_started
             predictions["traditional_ensemble"] = traditional_prediction
             models["traditional_ensemble"] = {
                 "selection": selection_payload["traditional_ensemble"],
+                "resource_observation": {
+                    "schema_version": "qm9-paper-resource-observation-v1",
+                    "process_peak_rss": _process_peak_rss(),
+                    "gpu_memory": _gpu_memory_observation("traditional-ensemble-blend"),
+                    "test_inference": _inference_observation(
+                        len(split.test), ensemble_inference_seconds
+                    ),
+                    "training_seconds": 0.0,
+                    "model_artifact": {
+                        "bytes": None,
+                        "reason": "ensemble-is-weights-in-selection-artifact-not-a-model-file",
+                    },
+                },
                 "test_metrics": native_metrics(y_test, traditional_prediction, train_scale),
                 "test_bootstrap_ci": bootstrap_confidence_intervals(
                     y_test,
@@ -1088,12 +1185,27 @@ def run_protocol(
                 ),
             }
             if external_enabled:
+                all_inference_started = time.perf_counter()
                 all_prediction = blend_predictions(
                     selection_payload["all_model_ensemble"], predictions
                 )
+                all_inference_seconds = time.perf_counter() - all_inference_started
                 predictions["all_model_ensemble"] = all_prediction
                 models["all_model_ensemble"] = {
                     "selection": selection_payload["all_model_ensemble"],
+                    "resource_observation": {
+                        "schema_version": "qm9-paper-resource-observation-v1",
+                        "process_peak_rss": _process_peak_rss(),
+                        "gpu_memory": _gpu_memory_observation("all-model-ensemble-blend"),
+                        "test_inference": _inference_observation(
+                            len(split.test), all_inference_seconds
+                        ),
+                        "training_seconds": 0.0,
+                        "model_artifact": {
+                            "bytes": None,
+                            "reason": "ensemble-is-weights-in-selection-artifact-not-a-model-file",
+                        },
+                    },
                     "test_metrics": native_metrics(y_test, all_prediction, train_scale),
                     "test_bootstrap_ci": bootstrap_confidence_intervals(
                         y_test,
@@ -1220,18 +1332,39 @@ def run_protocol(
     manifest["complete"] = len(completed) == (
         len(split_kinds) * len(protocol["seeds"])
     )
-    summary: dict[str, object] = {"schema_version": "qm9-paper-evaluation-summary-v1"}
+    summary: dict[str, object] = {
+        "schema_version": "qm9-paper-evaluation-summary-v1",
+        "paper_output_factors": [
+            "fixed-seeds",
+            "grouped-random-and-scaffold-splits",
+            "bootstrap-confidence-intervals",
+            "twelve-target-statistics",
+            "training-and-refit-time",
+            "inference-throughput-and-resource-high-water-marks",
+        ],
+    }
     by_method: dict[str, list[dict[str, object]]] = {}
     paired_by_reference: dict[str, list[dict[str, object]]] = {}
     for cell_id in sorted(completed):
         cell = json.loads((output / "cells" / f"{cell_id}.json").read_text(encoding="utf-8"))
         for method, result in cell["models"].items():
+            resource_observation = result.get("resource_observation", {})
+            inference = resource_observation.get("test_inference")
+            timing = result.get("timing_seconds", {})
             by_method.setdefault(method, []).append(
                 {
                     "cell_id": cell_id,
                     "split_kind": cell["split_kind"],
                     "seed": cell["seed"],
                     "score": result["test_metrics"]["mean_normalized_mae_across_12_targets"],
+                    "selection_seconds": timing.get("selection_total"),
+                    "training_or_refit_seconds": timing.get(
+                        "frozen_refit", resource_observation.get("training_seconds")
+                    ),
+                    "test_inference": inference,
+                    "process_peak_rss": resource_observation.get("process_peak_rss"),
+                    "gpu_memory": resource_observation.get("gpu_memory"),
+                    "model_artifact": resource_observation.get("model_artifact"),
                 }
             )
         for reference, interval in cell[
@@ -1254,6 +1387,55 @@ def run_protocol(
                     np.mean([item["score"] for item in records if item["split_kind"] == kind])
                 )
                 for kind in split_kinds
+            },
+            "cost_summary": {
+                "selection_seconds_sum": float(
+                    sum(item["selection_seconds"] or 0.0 for item in records)
+                ),
+                "training_or_refit_seconds_sum": float(
+                    sum(item["training_or_refit_seconds"] or 0.0 for item in records)
+                ),
+                "test_inference_seconds_sum": float(
+                    sum(
+                        item["test_inference"]["seconds"]
+                        for item in records
+                        if item["test_inference"] is not None
+                    )
+                ),
+                "test_rows_sum": int(
+                    sum(
+                        item["test_inference"]["rows"]
+                        for item in records
+                        if item["test_inference"] is not None
+                    )
+                ),
+                "effective_test_rows_per_second": float(
+                    sum(
+                        item["test_inference"]["rows"]
+                        for item in records
+                        if item["test_inference"] is not None
+                    )
+                    / max(
+                        sum(
+                            item["test_inference"]["seconds"]
+                            for item in records
+                            if item["test_inference"] is not None
+                        ),
+                        np.finfo(np.float64).eps,
+                    )
+                ),
+                "peak_process_rss_bytes_max": max(
+                    (
+                        item["process_peak_rss"]["bytes"]
+                        for item in records
+                        if item["process_peak_rss"] is not None
+                    ),
+                    default=None,
+                ),
+                "rss_semantics": "cumulative-process-high-water-mark-not-additive",
+                "gpu_memory_note": (
+                    "null unless the evaluated backend exposes truthful CUDA telemetry"
+                ),
             },
         }
         for method, records in by_method.items()

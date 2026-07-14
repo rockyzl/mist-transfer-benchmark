@@ -22,6 +22,11 @@ method = "paired-row-percentile-bootstrap"
 samples = 40
 confidence = 0.95
 
+[resource_instrumentation]
+enabled = true
+process_rss_method = "resource.getrusage-RUSAGE_SELF-ru_maxrss"
+gpu_policy = "null-with-reason-unless-truthful-backend-telemetry"
+
 [models.engineered_ridge]
 enabled = true
 candidates = [{ alpha = 0.1 }, { alpha = 1.0 }]

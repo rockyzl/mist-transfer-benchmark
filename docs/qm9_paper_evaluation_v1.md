@@ -23,6 +23,9 @@ frozen prediction file whose bytes are hashed in the result.
   `0.6-0.8`, `>=0.8`), not a third split and never a selection signal.
 - Every cell records selection, frozen-refit, inference, and wall time. A manifest and one atomic
   checkpoint per split/seed make interrupted runs resumable.
+- Every fitted traditional model records candidate training time, frozen-refit time, test inference
+  seconds, rows/second, milliseconds/row, and the process RSS high-water mark. The cross-cell cost
+  summary aggregates time and throughput by model.
 - `summary.json` aggregates every traditional model across seeds/splits; each cell includes a paired
   bootstrap delta CI for the traditional ensemble against its component models.
 
@@ -57,6 +60,16 @@ and cached similarity bytes. Protocol snapshot, input identity, freeze gate, sel
 similarity caches, cells, and summary are all content-hashed in the manifest. Any change is rejected.
 Manifest events record selection writes, the global gate, similarity caches, test-cell completion,
 and summary creation in sequence.
+
+## Resource-measurement limits
+
+CPU memory uses `resource.getrusage(RUSAGE_SELF).ru_maxrss`. This is a cumulative high-water mark
+for the whole process, not isolated model memory, so it is reported as a maximum and never summed.
+On Linux-like platforms `ru_maxrss` is interpreted as KiB; on macOS it is interpreted as bytes.
+The current Ridge, XGBoost, and sklearn MLP route is CPU/non-PyTorch. CUDA allocated/reserved memory
+therefore remains `null` with an explicit reason; reporting PyTorch allocator numbers for these
+backends would be misleading. Model artifact size is also `null` because phase A does not persist
+fitted model weights. Imported prediction files report their own byte size, not model-weight size.
 
 ## Smoke run
 
