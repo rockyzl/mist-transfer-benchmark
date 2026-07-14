@@ -26,7 +26,6 @@ from mist_transfer_benchmark.live_demo import (
     _mean_normalized_mae,
     _new_xgb,
     _predict_mlp,
-    _save_ridge,
     _xgb_device,
 )
 from mist_transfer_benchmark.qm9.constants import TARGET_COLUMNS
@@ -176,7 +175,10 @@ def _select_ensemble_weights(
         if best is None or score < best["validation_mean_normalized_mae"]:
             best = {
                 "model_order": names,
-                "weights": {name: float(value) for name, value in zip(names, weights)},
+                "weights": {
+                    name: float(value)
+                    for name, value in zip(names, weights, strict=True)
+                },
                 "validation_mean_normalized_mae": score,
                 "optimizer_success": bool(fitted.success),
             }
@@ -265,7 +267,7 @@ def run(config_path: Path, output_dir: Path) -> dict:
         predictions = np.empty_like(y_validation)
         rounds = []
         candidate_started = time.monotonic()
-        for target_index, target in enumerate(TARGET_COLUMNS):
+        for target_index, _target in enumerate(TARGET_COLUMNS):
             model = _new_xgb(
                 params,
                 seed=seed + target_index,

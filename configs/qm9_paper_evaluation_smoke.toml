@@ -1,0 +1,35 @@
+schema_version = "qm9-paper-evaluation-v1"
+protocol_id = "qm9-paper-evaluation-smoke-v1"
+target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
+seeds = [17]
+
+[splits]
+kinds = ["random", "scaffold"]
+fractions = [0.7, 0.15, 0.15]
+
+[similarity_analysis]
+method = "test-nearest-train-ECFP4-Tanimoto-fixed-strata"
+edges = [0.0, 0.3, 0.6, 0.8, 1.0000001]
+
+[external_predictions]
+enabled = false
+released_qm9_mist_reuse_forbidden = true
+
+[external_predictions.expected_artifact_manifest_sha256]
+
+[bootstrap]
+method = "paired-row-percentile-bootstrap"
+samples = 40
+confidence = 0.95
+
+[models.engineered_ridge]
+enabled = true
+candidates = [{ alpha = 0.1 }, { alpha = 1.0 }]
+
+[models.xgboost]
+enabled = false
+candidates = []
+
+[models.mlp]
+enabled = false
+candidates = []

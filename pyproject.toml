@@ -31,6 +31,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+paper = [
+  "xgboost>=3.0,<4",
+]
 dev = [
   "build>=1.2",
   "pytest>=8.2",
