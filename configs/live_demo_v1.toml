@@ -1,0 +1,72 @@
+protocol_id = "live-demo-v1"
+protocol_date = "2026-07-11"
+purpose = "Local interactive serving bundle; not a benchmark evaluation."
+no_test_policy = "The reconstructed QM9 test and validation labels are never read by this builder. Hyperparameter selection uses only a deterministic held-internal split of reconstructed train rows."
+target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
+target_units = ["D", "bohr^3", "hartree", "hartree", "hartree", "bohr^2", "hartree", "hartree", "hartree", "hartree", "hartree", "cal/(mol K)"]
+
+[source]
+qm9_csv = "data/private/qm9/qm9.csv"
+split_assignments = "results/qm9-phase1-v2/split_assignments.tsv"
+required_train_rows = 107108
+source_sha256 = "3e668f8c34e4bc392a90d417a50a5eed3b64b842a817a633024bdc054c68ccb4"
+
+[features]
+representation = "binary Morgan fingerprint (ECFP4)"
+radius = 2
+fp_size = 2048
+include_chirality = true
+use_bond_types = true
+include_ring_membership = true
+
+[internal_validation]
+seed = 20260711
+validation_fraction = 0.1
+rule = "Deterministic random partition of reconstructed train rows only; no official validation or test rows are loaded."
+
+[ridge]
+alpha = 10.0
+
+[xgboost]
+seed = 20260711
+candidate_order = ["compact", "wider"]
+early_stopping_rounds = 25
+runtime_device_preference = "cuda"
+
+[[xgboost.candidates]]
+id = "compact"
+max_depth = 7
+learning_rate = 0.06
+n_estimators = 350
+subsample = 0.85
+colsample_bytree = 0.75
+min_child_weight = 1.0
+
+[[xgboost.candidates]]
+id = "wider"
+max_depth = 9
+learning_rate = 0.05
+n_estimators = 450
+subsample = 0.85
+colsample_bytree = 0.85
+min_child_weight = 1.0
+
+[mlp]
+seed = 20260711
+candidate_order = ["compact", "wide"]
+batch_size = 512
+max_epochs = 16
+patience = 3
+learning_rate = 0.001
+weight_decay = 0.00001
+runtime_device_preference = "cuda"
+
+[[mlp.candidates]]
+id = "compact"
+hidden_dims = [512, 256]
+dropout = 0.05
+
+[[mlp.candidates]]
+id = "wide"
+hidden_dims = [768, 384]
+dropout = 0.10

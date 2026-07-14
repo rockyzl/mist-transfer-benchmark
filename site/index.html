@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Preliminary aggregate QM9-28M results and a separate synthetic redox benchmark explorer."
+      content="QM9 molecular-property predictions, preliminary aggregate results, and a separate synthetic redox explorer."
     >
-    <title>MIST Transfer Benchmark — QM9 results and redox explorer</title>
+    <title>MIST Transfer Benchmark — QM9 prediction and results</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
@@ -29,6 +29,7 @@
         <span>MIST <strong>Transfer Benchmark</strong></span>
       </a>
       <nav aria-label="Primary navigation">
+        <a href="#live-predict">Live predict</a>
         <a href="#qm9-results">QM9 results</a>
         <a href="#explorer">Redox demo</a>
         <a href="#method">Method</a>
@@ -47,7 +48,8 @@
             pretrained representations transfer beyond nearby chemical structures.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#qm9-results">See the QM9 result</a>
+            <a class="button button-primary" href="#live-predict">Predict from SMILES</a>
+            <a class="button button-secondary" href="#qm9-results">See the QM9 result</a>
             <a class="button button-secondary" href="#explorer">Explore the redox demo</a>
             <a class="button button-secondary" href="https://github.com/BattModels/mist-demo">
               Official MIST notebooks <span aria-hidden="true">↗</span>
@@ -97,6 +99,131 @@
               <text x="444" y="309">SIMILARITY ↓</text>
             </g>
           </svg>
+        </div>
+      </section>
+
+      <section class="live-predict-section" id="live-predict" aria-labelledby="live-predict-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Interactive QM9 property prediction</p>
+            <h2 id="live-predict-title">One molecule. Four fixed predictors.</h2>
+          </div>
+          <div class="live-stamp">
+            <span>CLIENT READY</span>
+            private API required
+          </div>
+        </div>
+
+        <p class="live-predict-lede">
+          Enter one SMILES string to compare ECFP Ridge, ECFP XGBoost, ECFP MLP, and the released
+          fine-tuned MIST-28M predictor across the same 12 QM9 properties. These values are model
+          predictions—not measurements, confidence intervals, or benchmark scores.
+        </p>
+
+        <div id="live-predict-shell" class="live-predict-shell is-empty">
+          <div class="live-input-panel">
+            <div id="live-api-status" class="live-api-status is-checking" role="status" aria-live="polite">
+              <span class="live-api-dot" aria-hidden="true"></span>
+              <div>
+                <strong id="live-api-status-title">Checking prediction API configuration…</strong>
+                <span id="live-api-status-detail">
+                  This static page never downloads or executes model weights.
+                </span>
+              </div>
+            </div>
+
+            <form id="live-predict-form" novalidate>
+              <label for="live-smiles-input">SMILES</label>
+              <textarea
+                id="live-smiles-input"
+                name="smiles"
+                rows="3"
+                maxlength="512"
+                required
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                aria-describedby="live-smiles-help live-form-error"
+                placeholder="For example: CCO"
+              ></textarea>
+              <p id="live-smiles-help" class="live-input-help">
+                One RDKit-parseable molecule, up to 512 characters. Predictions are most relevant
+                near the small organic molecules represented by QM9.
+              </p>
+
+              <div class="live-examples" aria-label="Example SMILES">
+                <span>Try an example</span>
+                <button type="button" data-example-smiles="C">Methane · C</button>
+                <button type="button" data-example-smiles="CCO">Ethanol · CCO</button>
+                <button type="button" data-example-smiles="CC(=O)O">Acetic acid · CC(=O)O</button>
+                <button type="button" data-example-smiles="c1ccncc1">Pyridine · c1ccncc1</button>
+              </div>
+
+              <p id="live-form-error" class="live-form-error" role="alert" hidden></p>
+              <div class="live-form-actions">
+                <button id="live-predict-button" class="button button-primary" type="submit" disabled>
+                  Predict properties
+                </button>
+                <button id="live-clear-button" class="button button-secondary" type="button">
+                  Clear
+                </button>
+              </div>
+            </form>
+
+            <details class="live-contract-note">
+              <summary>How the browser and private backend connect</summary>
+              <p>
+                The static page sends <code>{"smiles":"CCO"}</code> to the configured
+                <code>POST /v1/predict</code> endpoint without cookies or credentials. The backend
+                must return all four models and all 12 target/unit records. Without an API base URL,
+                this form stays disabled; static hosting does not run the private models by itself.
+              </p>
+              <a href="https://github.com/rockyzl/mist-transfer-benchmark/blob/main/docs/live_demo_client_contract.md">
+                Read the browser contract <span aria-hidden="true">→</span>
+              </a>
+            </details>
+          </div>
+
+          <div
+            id="live-prediction-results"
+            class="live-prediction-results"
+            aria-live="polite"
+            aria-busy="false"
+            hidden
+          >
+            <div class="live-results-header">
+              <div>
+                <p class="results-kicker">Native-unit model predictions</p>
+                <h3>Comparison for <code id="live-result-smiles">—</code></h3>
+              </div>
+              <span class="live-result-badge">No measured truth</span>
+            </div>
+
+            <div id="live-focus-grid" class="live-focus-grid" aria-label="Highlighted electronic properties"></div>
+
+            <div class="live-table-wrap">
+              <table>
+                <caption>All 12 predicted QM9 properties for the submitted SMILES</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Property</th>
+                    <th scope="col">Unit</th>
+                    <th scope="col">Ridge</th>
+                    <th scope="col">XGBoost</th>
+                    <th scope="col">MLP</th>
+                    <th scope="col">MIST-28M</th>
+                  </tr>
+                </thead>
+                <tbody id="live-prediction-rows"></tbody>
+              </table>
+            </div>
+
+            <p class="live-results-note">
+              HOMO, LUMO, and gap are highlighted because they are relevant to molecular and
+              battery-material screening. Model disagreement is not calibrated uncertainty, and
+              none of these values describes electrolyte, electrode-interface, or cell performance.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -410,6 +537,8 @@
     <noscript>
       <p class="noscript">JavaScript is required to render the aggregate result and synthetic explorer.</p>
     </noscript>
+    <script src="./live-config.js" defer></script>
+    <script src="./live-api.js" defer></script>
     <script src="./app.js" defer></script>
   </body>
 </html>

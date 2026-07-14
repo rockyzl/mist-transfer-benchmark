@@ -94,6 +94,8 @@ released-predictor result, but it does not answer the harder redox transfer ques
 - machine-readable run metadata, split assignments, predictions, and metrics;
 - a local static, accessible QM9 aggregate-results view plus a separate explorer for comparing
   split behavior on synthetic redox fixtures;
+- a browser-only SMILES prediction client with a four-model response contract; it stays disabled
+  until a separately operated local/private API base URL is configured;
 - a synthetic fixture for testing the software only.
 
 QM9 MIST inference is implemented against one fixed-revision, ignored local snapshot; weights and
@@ -102,6 +104,21 @@ private or real redox dataset is bundled. See
 [`docs/mist_integration.md`](docs/mist_integration.md) for the verified integration boundary.
 
 ### Preliminary QM9 result
+
+The expanded independent comparison includes tuned XGBoost, MLP, engineered
+Ridge, and validation-selected ensembles using count ECFP4 plus 17 global
+molecular descriptors. On the same 13,389-row candidate test cohort, mean
+normalized MAE was `0.087400` for the traditional-only XGBoost/MLP/Ridge
+ensemble, `0.094336` for XGBoost, `0.095064` for the released fine-tuned MIST
+checkpoint, `0.100364` for MLP, and `0.149839` for engineered Ridge. XGBoost
+and MIST should be read as near parity in this single point estimate. As a
+second-layer systems result, adding MIST to the ensemble improves the score to
+`0.081159`, indicating complementary errors. The traditional-only reporting
+correction is explicitly post-specified because it was made after the first
+test report; its weights still use validation labels only. See the
+[`extended comparison report`](docs/qm9_extended_comparison_v1.md) for the
+training process, feature/hyperparameter selection, runtime, per-target scope,
+and limitations.
 
 The released 12-output MIST checkpoint was run once on all `13,389` candidate reconstructed test
 rows after a separate 128-row train/validation smoke test. Lower is better for the aggregate mean
@@ -123,6 +140,16 @@ runtime evidence, and rights restrictions are in the focused
 [`QM9 result report`](docs/qm9_28m_results.md). The static view consumes the reproducible,
 aggregate-only [`result summary`](site/qm9-results.json); the complete decision trail remains in
 the [`QM9 process document`](docs/qm9_28m_benchmark_process.md).
+
+### Interactive prediction client
+
+The static page includes a client for comparing Ridge, XGBoost, MLP, and MIST predictions across
+all 12 QM9 properties. It sends one `{"smiles":"CCO"}` request to a configured
+`POST /v1/predict` endpoint and highlights HOMO, LUMO, and gap while retaining the complete table.
+The default [`site/live-config.js`](site/live-config.js) contains no API URL, credentials, model
+path, or weight reference, so the form remains visibly disabled on an ordinary static deployment.
+The exact browser/backend boundary is documented in the
+[`live prediction client contract`](docs/live_demo_client_contract.md).
 
 The QM9 Phase 1 command deliberately keeps Datasets 3.2.0 in a separate temporary environment, then
 requires exact membership agreement before writing ignored local artifacts:
@@ -185,9 +212,9 @@ The fixture values are synthetic and deliberately have no scientific meaning. A 
 proves only that the pipeline works. See [`data/fixtures/NOTICE`](data/fixtures/NOTICE) for its CC0
 legal notice.
 
-The [currently deployed benchmark explorer](https://rockyzl.github.io/mist-transfer-benchmark/)
-still visualizes the earlier software-only redox outputs. After a future push and Pages deployment,
-the same URL can serve the local QM9 aggregate-results section added here. With the authenticated,
+The [deployed benchmark explorer](https://rockyzl.github.io/mist-transfer-benchmark/) serves the
+aggregate-only QM9 result and synthetic redox track. Static hosting does not run the private live
+models; that client requires an explicitly configured prediction API. With the authenticated,
 ignored Phase 2/3 aggregate artifacts present, both tracked data files are reproducible:
 
 ```bash
