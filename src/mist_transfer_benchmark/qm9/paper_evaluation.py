@@ -25,6 +25,7 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 from rdkit.ML.Cluster import Butina
 from scipy import sparse
 from scipy.optimize import minimize
+from sklearn.compose import TransformedTargetRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
@@ -461,9 +462,12 @@ def _new_model(family: str, params: dict[str, Any], seed: int):
     if family == "engineered_ridge":
         return make_pipeline(StandardScaler(with_mean=False), Ridge(**params))
     if family == "mlp":
-        return make_pipeline(
-            StandardScaler(with_mean=False),
-            MLPRegressor(random_state=seed, **params),
+        return TransformedTargetRegressor(
+            regressor=make_pipeline(
+                StandardScaler(with_mean=False),
+                MLPRegressor(random_state=seed, **params),
+            ),
+            transformer=StandardScaler(),
         )
     if family == "xgboost":
         try:
@@ -476,6 +480,65 @@ def _new_model(family: str, params: dict[str, Any], seed: int):
     raise PaperEvaluationError(f"unsupported model family: {family}")
 
 
+def _mlp_training_diagnostics(model: object) -> dict[str, object] | None:
+    """Extract public sklearn learning curves without touching test labels."""
+
+    if not isinstance(model, TransformedTargetRegressor):
+        return None
+    pipeline = model.regressor_
+    estimator = pipeline.named_steps["mlpregressor"]
+    loss = [float(value) for value in estimator.loss_curve_]
+    validation_r2 = [float(value) for value in (estimator.validation_scores_ or [])]
+    validation_error = [1.0 - value for value in validation_r2]
+    reasons: list[str] = []
+    warnings: list[str] = []
+    if not loss or not np.all(np.isfinite(loss)):
+        reasons.append("training-loss-is-empty-or-nonfinite")
+    elif len(loss) > 1:
+        relative_improvement = (loss[0] - min(loss)) / max(abs(loss[0]), 1e-12)
+        if relative_improvement < 0.01:
+            reasons.append("training-loss-improved-less-than-one-percent")
+        if loss[-1] > min(loss) * 1.5:
+            reasons.append("final-training-loss-is-over-50-percent-above-best")
+    if validation_r2 and not np.all(np.isfinite(validation_r2)):
+        reasons.append("validation-r2-is-nonfinite")
+    if len(validation_error) > 1:
+        best_validation_error = min(validation_error)
+        best_epoch = int(np.argmin(validation_error))
+        trailing = validation_error[best_epoch:]
+        consecutive_increases = 0
+        maximum_consecutive_increases = 0
+        for previous, current in zip(trailing, trailing[1:], strict=False):
+            consecutive_increases = consecutive_increases + 1 if current > previous else 0
+            maximum_consecutive_increases = max(
+                maximum_consecutive_increases, consecutive_increases
+            )
+        if maximum_consecutive_increases >= 2:
+            warnings.append("validation-error-increased-after-best-epoch")
+        baseline = max(abs(best_validation_error), 1e-12)
+        if validation_error[-1] > best_validation_error + 0.10 * baseline:
+            warnings.append("final-validation-error-is-over-10-percent-above-best")
+    return {
+        "curve_schema": "sklearn-mlp-learning-curve-v1",
+        "training_loss": loss,
+        "validation_r2": validation_r2,
+        "validation_error_one_minus_r2": validation_error,
+        "epochs_ran": len(loss),
+        "best_training_loss_epoch": int(np.argmin(loss)) + 1 if loss else None,
+        "best_training_loss": min(loss) if loss else None,
+        "final_training_loss": loss[-1] if loss else None,
+        "best_validation_error_epoch": (
+            int(np.argmin(validation_error)) + 1 if validation_error else None
+        ),
+        "best_validation_error": min(validation_error) if validation_error else None,
+        "final_validation_error": validation_error[-1] if validation_error else None,
+        "target_scaling": "StandardScaler-fit-on-cell-training-targets-only",
+        "input_scaling": "StandardScaler-with-mean-false-fit-on-cell-training-features-only",
+        "anomaly_reasons": reasons,
+        "warning_reasons": warnings,
+    }
+
+
 def select_model_parameters(
     family: str,
     candidates: list[dict[str, Any]],
@@ -485,6 +548,7 @@ def select_model_parameters(
     split: EvaluationSplit,
     *,
     seed: int,
+    monitoring: dict[str, Any] | None = None,
 ) -> tuple[dict[str, object], np.ndarray]:
     """Select a family using train/validation only; never index test targets."""
 
@@ -493,6 +557,7 @@ def select_model_parameters(
     train_scale = np.std(y_train, axis=0, ddof=0)
     if np.any(train_scale <= 0):
         raise PaperEvaluationError("training target scale contains zero")
+    monitoring = dict(monitoring or {})
     records = []
     best: tuple[float, dict[str, Any]] | None = None
     selection_started = time.perf_counter()
@@ -505,8 +570,8 @@ def select_model_parameters(
         prediction = np.asarray(model.predict(x[split.validation]), dtype=np.float64)
         inference_seconds = time.perf_counter() - inference_started
         score = _score(y_validation, prediction, train_scale)
-        records.append(
-            {
+        diagnostics = _mlp_training_diagnostics(model)
+        record = {
                 "parameters": candidate,
                 "validation_score": score,
                 "training_seconds": fit_seconds,
@@ -516,10 +581,23 @@ def select_model_parameters(
                 "process_peak_rss": _process_peak_rss(),
                 "gpu_memory": _gpu_memory_observation(family),
             }
-        )
+        if diagnostics is not None:
+            record["training_diagnostics"] = diagnostics
+        records.append(record)
         if best is None or score < best[0]:
             best = (score, candidate)
     assert best is not None
+    selected_record = next(record for record in records if record["parameters"] == best[1])
+    anomaly_reasons = list(
+        (selected_record.get("training_diagnostics") or {}).get("anomaly_reasons", [])
+    )
+    warning_reasons = list(
+        (selected_record.get("training_diagnostics") or {}).get("warning_reasons", [])
+    )
+    if family == "mlp" and best[0] > float(
+        monitoring.get("mlp_max_validation_normalized_mae", float("inf"))
+    ):
+        anomaly_reasons.append("best-mlp-validation-normalized-mae-exceeds-threshold")
     selected_model = _new_model(family, best[1], seed)
     selected_model.fit(x[split.train], y_train)
     selected_prediction = np.asarray(
@@ -533,6 +611,14 @@ def select_model_parameters(
             "selected_parameters": best[1],
             "selected_validation_score": best[0],
             "selection_seconds": time.perf_counter() - selection_started,
+            "monitoring": {
+                "status": (
+                    "abnormal" if anomaly_reasons else "warning" if warning_reasons else "normal"
+                ),
+                "anomaly_reasons": anomaly_reasons,
+                "warning_reasons": warning_reasons,
+                "thresholds": monitoring,
+            },
         },
         selected_prediction,
     )
@@ -1048,9 +1134,28 @@ def run_protocol(
                     y_validation,
                     split,
                     seed=int(seed),
+                    monitoring=protocol.get("monitoring"),
                 )
                 selections[family] = selection
                 validation_predictions[family] = prediction
+                if selection["monitoring"]["status"] == "abnormal" and bool(
+                    protocol.get("monitoring", {}).get("fail_on_abnormal_selection", False)
+                ):
+                    anomaly_path = output / "anomalies" / f"{cell_id}-{family}.json"
+                    _atomic_json(
+                        anomaly_path,
+                        {
+                            "schema_version": "qm9-paper-training-anomaly-v1",
+                            "cell_id": cell_id,
+                            "family": family,
+                            "selection": selection,
+                            "test_targets_read": False,
+                        },
+                    )
+                    raise PaperEvaluationError(
+                        f"abnormal {family} training detected for {cell_id}: "
+                        + ", ".join(selection["monitoring"]["anomaly_reasons"])
+                    )
             train_scale = np.std(y_train, axis=0, ddof=0)
             traditional_ensemble = select_ensemble_weights(
                 validation_predictions, y_validation, train_scale

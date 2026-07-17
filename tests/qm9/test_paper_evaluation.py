@@ -192,6 +192,38 @@ def test_traditional_ensemble_summary_and_paired_delta_are_written(tmp_path):
     assert cost["peak_process_rss_bytes_max"] > 0
 
 
+def test_mlp_scales_targets_and_persists_learning_curve(tmp_path):
+    x, y, smiles = _data(72)
+    y = y * np.asarray([1e5, 1e3, 100, 10, 1, 0.1, 0.01, 2, 20, 200, 2000, 20000])
+    protocol = _protocol()
+    protocol["splits"]["kinds"] = ["random"]
+    protocol["models"] = {
+        "mlp": {
+            "enabled": True,
+            "candidates": [{
+                "hidden_layer_sizes": [12],
+                "alpha": 1e-5,
+                "learning_rate_init": 0.01,
+                "max_iter": 30,
+                "early_stopping": True,
+            }],
+        }
+    }
+    protocol["monitoring"] = {
+        "persist_mlp_learning_curves": True,
+        "fail_on_abnormal_selection": False,
+        "mlp_max_validation_normalized_mae": 10.0,
+    }
+    _run(protocol, x, y, smiles, tmp_path / "mlp")
+    selection = json.loads((tmp_path / "mlp/selections/random-seed-5.json").read_text())
+    model = selection["models"]["mlp"]
+    diagnostics = model["candidates"][0]["training_diagnostics"]
+    assert diagnostics["training_loss"]
+    assert diagnostics["validation_error_one_minus_r2"]
+    assert diagnostics["target_scaling"].endswith("training-targets-only")
+    assert np.isfinite(model["selected_validation_score"])
+
+
 def test_external_mode_requires_every_cell_and_denies_released_qm9(tmp_path):
     x, y, smiles = _data()
     with pytest.raises(PaperEvaluationError, match="present exactly"):

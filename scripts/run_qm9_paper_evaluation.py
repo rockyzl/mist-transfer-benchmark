@@ -48,6 +48,14 @@ def main() -> None:
     args = parser.parse_args()
     with args.config.open("rb") as handle:
         protocol = tomllib.load(handle)
+    protocol["implementation_identity"] = {
+        path: sha256_file(Path(path))
+        for path in (
+            "scripts/run_qm9_paper_evaluation.py",
+            "src/mist_transfer_benchmark/qm9/paper_evaluation.py",
+            "src/mist_transfer_benchmark/qm9/engineered_features.py",
+        )
+    }
     real_arguments = (
         args.qm9_csv,
         args.feature_matrix,

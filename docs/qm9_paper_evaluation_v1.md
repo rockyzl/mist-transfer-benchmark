@@ -112,8 +112,25 @@ uv run python scripts/run_qm9_paper_evaluation.py \
 ```
 
 The stored engineered values are raw. `StandardScaler(with_mean=False)` is fitted separately on
-each cell's training rows inside Ridge and MLP. XGBoost receives the raw sparse values. This keeps
-test-distribution statistics outside model fitting.
+each cell's training rows inside Ridge and MLP. MLP additionally standardizes each of the 12 target
+columns from that cell's training labels and reverses the transform for predictions. XGBoost
+receives the raw sparse values. This keeps test-distribution statistics outside model fitting.
+
+MLP candidates persist their epoch-level training loss, sklearn early-stopping validation R2, and
+the corresponding validation error curve (`1 - R2`; lower is better). A sustained validation-error
+increase after the best epoch is marked as a possible-overfitting warning in the monitor.
+The frozen early-stopping rule uses a 10% inner-validation holdout from the cell's training rows,
+`tol = 0.0001`, and `n_iter_no_change = 10`. Training stops after ten epochs without a qualifying
+validation-R2 improvement (subject to the 80/100-epoch candidate cap), and sklearn restores the
+best recorded coefficients. The outer validation partition still selects between candidates.
+The protocol halts before the test gate if the best MLP validation normalized MAE exceeds the
+frozen threshold or if a learning-curve integrity check fails. Build the local auto-refreshing
+monitor with:
+
+```bash
+uv run python scripts/build_qm9_loss_report.py \
+  --run results/qm9-paper-evaluation-v1
+```
 
 Install the optional production dependency before enabling XGBoost:
 

@@ -1,11 +1,11 @@
 schema_version = "qm9-paper-evaluation-v1"
-protocol_id = "qm9-paper-evaluation-v1"
+protocol_id = "qm9-mlp-monitoring-preflight-v1"
 target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
-seeds = [20260713, 20260729, 20260811, 20260823, 20260907]
+seeds = [20260717]
 
 [splits]
-kinds = ["random", "scaffold"]
-fractions = [0.8, 0.1, 0.1]
+kinds = ["random"]
+fractions = [0.7, 0.15, 0.15]
 
 [similarity_analysis]
 method = "test-nearest-train-ECFP4-Tanimoto-fixed-strata"
@@ -15,12 +15,11 @@ edges = [0.0, 0.3, 0.6, 0.8, 1.0000001]
 enabled = false
 released_qm9_mist_reuse_forbidden = true
 
-# Must contain one `split-seed` = SHA-256 entry before external mode can be enabled.
 [external_predictions.expected_artifact_manifest_sha256]
 
 [bootstrap]
 method = "paired-row-percentile-bootstrap"
-samples = 2000
+samples = 40
 confidence = 0.95
 
 [resource_instrumentation]
@@ -32,17 +31,6 @@ gpu_policy = "null-with-reason-unless-truthful-backend-telemetry"
 persist_mlp_learning_curves = true
 fail_on_abnormal_selection = true
 mlp_max_validation_normalized_mae = 0.5
-
-[models.engineered_ridge]
-enabled = true
-candidates = [{ alpha = 0.1 }, { alpha = 1.0 }, { alpha = 10.0 }, { alpha = 100.0 }]
-
-[models.xgboost]
-enabled = true
-candidates = [
-  { n_estimators = 500, max_depth = 6, learning_rate = 0.05, subsample = 0.9, colsample_bytree = 0.9 },
-  { n_estimators = 900, max_depth = 8, learning_rate = 0.03, subsample = 0.85, colsample_bytree = 0.85 },
-]
 
 [models.mlp]
 enabled = true
