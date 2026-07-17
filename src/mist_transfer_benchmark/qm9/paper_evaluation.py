@@ -27,6 +27,8 @@ from scipy import sparse
 from scipy.optimize import minimize
 from sklearn.linear_model import Ridge
 from sklearn.neural_network import MLPRegressor
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from .constants import TARGET_COLUMNS
 from .phase2_metrics import native_metrics
@@ -457,9 +459,12 @@ def _score(y_true: np.ndarray, y_pred: np.ndarray, scale: np.ndarray) -> float:
 
 def _new_model(family: str, params: dict[str, Any], seed: int):
     if family == "engineered_ridge":
-        return Ridge(**params)
+        return make_pipeline(StandardScaler(with_mean=False), Ridge(**params))
     if family == "mlp":
-        return MLPRegressor(random_state=seed, **params)
+        return make_pipeline(
+            StandardScaler(with_mean=False),
+            MLPRegressor(random_state=seed, **params),
+        )
     if family == "xgboost":
         try:
             from xgboost import XGBRegressor

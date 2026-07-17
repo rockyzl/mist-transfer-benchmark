@@ -89,6 +89,32 @@ library resolver in the full run. The production config is
 `configs/qm9_paper_evaluation_v1.toml`. The complete run is intentionally not started by CI or by
 the smoke command.
 
+The production route keeps private QM9 labels in the authenticated source CSV and stores the large
+feature matrix as sparse CSR rather than materializing a multi-gigabyte dense NPZ. Prepare the raw
+count-ECFP4 plus 17 global descriptors once:
+
+```bash
+uv run python scripts/prepare_qm9_paper_features.py \
+  --qm9-csv data/private/qm9/qm9.csv \
+  --output data/private/qm9/paper-evaluation-v1
+```
+
+Then start or resume the repeated evaluation:
+
+```bash
+uv run python scripts/run_qm9_paper_evaluation.py \
+  --config configs/qm9_paper_evaluation_v1.toml \
+  --output results/qm9-paper-evaluation-v1 \
+  --qm9-csv data/private/qm9/qm9.csv \
+  --feature-matrix data/private/qm9/paper-evaluation-v1/feature_matrix.npz \
+  --feature-manifest data/private/qm9/paper-evaluation-v1/manifest.json \
+  --scaffold-groups data/private/qm9/paper-evaluation-v1/scaffold_group_ids.npy
+```
+
+The stored engineered values are raw. `StandardScaler(with_mean=False)` is fitted separately on
+each cell's training rows inside Ridge and MLP. XGBoost receives the raw sparse values. This keeps
+test-distribution statistics outside model fitting.
+
 Install the optional production dependency before enabling XGBoost:
 
 ```bash
