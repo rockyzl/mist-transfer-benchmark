@@ -39,6 +39,10 @@ def main() -> None:
             diagnostics = candidate.get("training_diagnostics", {})
             loss = diagnostics.get("training_loss", [])
             validation_error = diagnostics.get("validation_error_one_minus_r2", [])
+            if not validation_error and diagnostics.get("validation_r2"):
+                validation_error = [
+                    1.0 - float(value) for value in diagnostics["validation_r2"]
+                ]
             reasons = diagnostics.get("anomaly_reasons", [])
             warnings = diagnostics.get("warning_reasons", [])
             status = "ABNORMAL" if reasons else "WARNING" if warnings else "normal"
