@@ -13,6 +13,8 @@ import json
 import tomllib
 from pathlib import Path
 
+from mist_transfer_benchmark.qm9.fixed_split_evaluation import require_publication_ready
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = REPO_ROOT / "configs/qm9_28m.toml"
 DEFAULT_PHASE2_DIR = REPO_ROOT / "results/qm9-phase2-classical-v1"
@@ -440,7 +442,14 @@ def main() -> None:
     parser.add_argument("--phase3-audit-dir", type=Path, default=DEFAULT_PHASE3_AUDIT_DIR)
     parser.add_argument("--phase3-dir", type=Path, default=DEFAULT_PHASE3_DIR)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--v2-run",
+        type=Path,
+        help="optional fixed-split v2 result; rejected unless publication review is approved",
+    )
     args = parser.parse_args()
+    if args.v2_run is not None:
+        require_publication_ready(args.v2_run)
     payload = build_summary(
         config_path=args.config,
         phase2_dir=args.phase2_dir,

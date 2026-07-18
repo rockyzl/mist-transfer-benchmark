@@ -29,15 +29,16 @@ Outputs:
   MIST, all 12 target metrics, runtime, and seen/unseen-scaffold test subgroups;
 - `loss-monitor.html`: per-seed MLP training and validation-error curves with anomaly flags.
 
-An incomplete output directory is fail-closed and is not resumable. After any failed or interrupted
-attempt, preserve it for diagnosis and start the next attempt in a fresh output directory.
+An incomplete output directory is fail-closed and is not resumable, except for the intentional
+`AWAITING_SELECTION_REVIEW` transition with a matching approval artifact. Preserve every failed or
+interrupted attempt for diagnosis and use a fresh output directory.
 
 ## Acceptance criteria
 
-- [ ] Every critical step has a recorded Plan -> Execute -> Review checkpoint.
+- [x] Every critical step has a recorded Plan -> Execute -> Review checkpoint.
 - [x] Input-boundary and private-preflight review passes before the full run starts.
-- [ ] Selection-freeze and test-unlock reviews pass before any test-label read.
-- [ ] Independent publication review passes before site/article claims are changed.
+- [x] Selection-freeze and test-unlock require a separate bound approval before test-label access.
+- [x] Publication remains blocked until a separately bound independent approval is verified.
 - [ ] Existing released MIST is inference-only and evaluated only on its compatible fixed split.
 - [ ] Five predetermined traditional-model seeds run on the same split.
 - [ ] Hyperparameters and feature schema are frozen before test access.
@@ -67,6 +68,9 @@ attempt, preserve it for diagnosis and start the next attempt in a fresh output 
 - [x] Critical-step Plan -> Execute -> Review contract added to protocol and runtime artifacts.
 - [x] Deterministic smoke and hardened private-artifact preflight completed.
 - [x] Paper runtime dependencies installed and dependency-aware private preflight repeated.
+- [x] Three-stage selection, test-unlock, and publication governance implemented.
+- [x] Fresh synthetic three-stage governance smoke and fresh private preflight passed.
+- [x] Negative tests cover stale approvals, artifact/manifest tamper, repeated reads, and publishing.
 - [ ] Full five-seed run executed (not started).
 
 ## Decisions
@@ -83,10 +87,16 @@ A later repeated experiment that created new random and scaffold splits was stop
 released fine-tuned MIST checkpoint could not be evaluated on those changed splits without an
 unknown overlap with its fine-tuning data. Its outputs must not be presented as a MIST comparison.
 
-The v2 runner and preflight path are implemented. Deterministic smoke, private-artifact preflight,
-independent QA, the targeted correction round, and lead revalidation completed. No full five-seed
-summary, bootstrap interval, or seen/unseen-scaffold result has been produced. The runner interface
-is recorded in `docs/reproducibility.md` and is ready for a fresh, reviewed scientific run.
+The v2 runner and preflight path are implemented. The governance correction separates automated
+checks from two independent approvals. The current task validates those controls with synthetic
+smoke and private preflight only. No full five-seed summary, bootstrap interval, or
+seen/unseen-scaffold result has been produced. The runner interface is recorded in
+`docs/reproducibility.md`.
+
+The latest governance smoke reached `AWAITING_SELECTION_REVIEW` with zero test-label reads, used a
+separate bound selection approval to reach `AWAITING_PUBLICATION_REVIEW` with exactly one read,
+proved that the v2-aware builder rejected that unapproved result, and then used a distinct bound
+publication approval to reach `PUBLICATION_APPROVED`. These are synthetic control results only.
 
 ## Durable next-session assumptions
 
@@ -101,7 +111,7 @@ is recorded in `docs/reproducibility.md` and is ready for a fresh, reviewed scie
 - Report only seen/unseen-scaffold subgroups inside the fixed test cohort; v2 does not promise a
   Tanimoto or continuous-similarity analysis.
 - Keep the traditional-only ensemble primary and the ensemble that includes MIST supplemental.
-- Treat incomplete outputs as failed attempts: do not resume or overwrite them, and use a fresh
-  output directory for every retry.
+- Resume only the intentional `AWAITING_SELECTION_REVIEW` state with its exact approval; treat all
+  other incomplete outputs as failed attempts.
 - Do not update the article or scientific headline until artifacts pass schema checks and
   independent QA.

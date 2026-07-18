@@ -16,8 +16,12 @@ from mist_transfer_benchmark.qm9.data import load_qm9_identities
 from mist_transfer_benchmark.qm9.fixed_split_evaluation import (
     FixedSplitEvaluationError,
     LazyTestTargetGate,
+    approve_publication,
+    canonical_hash,
+    collect_run_identity,
     critical_review_plan,
     file_sha256,
+    require_clean_run_identity,
     run_fixed_split,
     run_smoke_protocol,
 )
@@ -79,6 +83,14 @@ def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
             torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
         ),
     }
+    run_identity = collect_run_identity(Path.cwd())
+    run_identity["config"] = {
+        "canonical_sha256": canonical_hash(config),
+        "file_sha256": file_sha256(args.config),
+        "path": str(args.config),
+    }
+    if not args.preflight:
+        require_clean_run_identity(run_identity)
     with Path("configs/qm9_28m.toml").open("rb") as handle:
         phase1_config = tomllib.load(handle)
     identities = load_qm9_identities(args.qm9_csv)
@@ -184,6 +196,8 @@ def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
             "rows": {"train": len(train), "validation": len(validation), "test": len(test)},
             "features": {"shape": list(features.shape), "nnz": int(features.nnz)},
             "runtime_dependencies": runtime_dependencies,
+            "run_identity": run_identity,
+            "config_sha256": file_sha256(args.config),
             "structural_novelty": {
                 label: int(np.sum(novelty_labels == label)) for label in sorted(set(novelty_labels))
             },
@@ -219,6 +233,8 @@ def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
         mist_test,
         args.output,
         input_identity=identity,
+        run_identity=run_identity,
+        review_approval_path=args.selection_approval,
         smoke=False,
         structural_novelty_labels=novelty_labels,
     )
@@ -237,7 +253,22 @@ def main() -> None:
     parser.add_argument("--mist-dir", type=Path)
     parser.add_argument("--mist-validation-predictions", type=Path)
     parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--selection-approval", type=Path)
+    parser.add_argument("--publication-approval", type=Path)
     args = parser.parse_args()
+    if args.publication_approval is not None:
+        manifest = approve_publication(args.output, args.publication_approval)
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "stage": manifest["stage"],
+                    "publication_ready": manifest["publication_ready"],
+                },
+                indent=2,
+            )
+        )
+        return
     private = [
         args.qm9_csv,
         args.feature_matrix,
@@ -251,8 +282,29 @@ def main() -> None:
         value is not None for value in private
     ):
         parser.error("real mode requires all five private artifact arguments")
-    manifest = _run_real(args, config) if all(private) else run_smoke_protocol(config, args.output)
-    print(json.dumps({"output": str(args.output), "complete": manifest["complete"]}, indent=2))
+    manifest = (
+        _run_real(args, config)
+        if all(private)
+        else run_smoke_protocol(
+            config, args.output, review_approval_path=args.selection_approval
+        )
+    )
+    if "preflight" in manifest:
+        report = {
+            "output": str(args.output),
+            "complete": False,
+            "stage": "PREFLIGHT_READY",
+            "test_labels_read": manifest["preflight"]["test_labels_read"],
+        }
+    else:
+        report = {
+            "output": str(args.output),
+            "complete": manifest["complete"],
+            "stage": manifest["stage"],
+            "test_label_reads": manifest["test_access"]["read_count"],
+            "publication_ready": manifest["publication_ready"],
+        }
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":

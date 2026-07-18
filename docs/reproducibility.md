@@ -59,9 +59,10 @@ Before a reviewed v2 run, archive or verify all of the following:
 7. validation-only ensemble weights and an audit proving test labels were not used for selection;
 8. paired bootstrap settings and fixed-test seen/unseen-scaffold subgroup definitions.
 
-The runner, deterministic smoke, private preflight, and final QA revalidation are complete. The
-commands below are the reviewed interface; their presence is not evidence that the full five-seed
-v2 experiment has run.
+The runner uses three separate commands: Stage A freezes selection and stops, Stage B requires an
+independent selection approval before exactly one test-label read, and Stage C requires a separate
+publication approval. The commands below are the reviewed interface; their presence and smoke use
+are not evidence that the full five-seed v2 experiment has run.
 
 Install the real-training backends before private preflight or execution:
 
@@ -72,18 +73,68 @@ uv sync --extra paper --frozen
 The preflight fails closed if PyTorch or XGBoost is unavailable and records their versions plus
 CUDA availability. CPU execution remains valid but will be materially slower than the GPU route.
 
-Deterministic smoke:
+Deterministic smoke Stage A (automated checks and selection freeze only):
 
 ```bash
-.venv/bin/python scripts/run_qm9_fixed_split_evaluation.py \
+uv run --extra paper python scripts/run_qm9_fixed_split_evaluation.py \
   --config configs/qm9_fixed_split_evaluation_v2.toml \
-  --output results/qm9-fixed-split-v2-smoke
+  --output /tmp/qm9-fixed-split-v2-smoke
+```
+
+This must stop at `AWAITING_SELECTION_REVIEW` with `test_label_reads: 0`. An independent reviewer
+then inspects the manifest, global freeze, five seed records, predictions, hashes, and loss monitor
+and explicitly creates the bound approval:
+
+```bash
+uv run --extra paper python scripts/review_qm9_fixed_split.py \
+  --run /tmp/qm9-fixed-split-v2-smoke \
+  --stage selection \
+  --reviewer "REVIEWER_NAME" \
+  --notes "Reviewed selection artifacts, curves, hashes, and leakage boundary." \
+  --approve \
+  --output /tmp/qm9-fixed-split-v2-selection-approval.json
+```
+
+Smoke Stage B is a separate invocation. It verifies the approval against the unchanged manifest
+and global-freeze hashes, then reads test labels exactly once:
+
+```bash
+uv run --extra paper python scripts/run_qm9_fixed_split_evaluation.py \
+  --config configs/qm9_fixed_split_evaluation_v2.toml \
+  --output /tmp/qm9-fixed-split-v2-smoke \
+  --selection-approval /tmp/qm9-fixed-split-v2-selection-approval.json
+```
+
+It stops at `AWAITING_PUBLICATION_REVIEW`, with `test_label_reads: 1` and
+`publication_ready: false`. A second independent review covers the summary, loss monitor,
+manifest, and every declared artifact hash:
+
+```bash
+uv run --extra paper python scripts/review_qm9_fixed_split.py \
+  --run /tmp/qm9-fixed-split-v2-smoke \
+  --stage publication \
+  --reviewer "INDEPENDENT_REVIEWER_NAME" \
+  --notes "Reviewed summary, loss monitor, manifest, limitations, and artifact hashes." \
+  --approve \
+  --output /tmp/qm9-fixed-split-v2-publication-approval.json
+
+uv run --extra paper python scripts/run_qm9_fixed_split_evaluation.py \
+  --output /tmp/qm9-fixed-split-v2-smoke \
+  --publication-approval /tmp/qm9-fixed-split-v2-publication-approval.json
+```
+
+Only the last command may set `publication_ready: true`. A builder preparing to consume v2 must
+provide `--v2-run`; it fails closed unless the publication approval and final checksum verify:
+
+```bash
+uv run --extra paper python scripts/build_qm9_results.py \
+  --v2-run /tmp/qm9-fixed-split-v2-smoke
 ```
 
 Private-artifact preflight:
 
 ```bash
-.venv/bin/python scripts/run_qm9_fixed_split_evaluation.py \
+uv run --extra paper python scripts/run_qm9_fixed_split_evaluation.py \
   --config configs/qm9_fixed_split_evaluation_v2.toml \
   --output results/qm9-fixed-split-v2-preflight-<ATTEMPT_ID> \
   --qm9-csv data/private/qm9/qm9.csv \
@@ -94,16 +145,21 @@ Private-artifact preflight:
   --preflight
 ```
 
-The full run uses the same private inputs, omits `--preflight`, and writes to a new permanent
-output directory. The optional
+Formal Stage A uses the same private inputs, omits `--preflight`, requires a clean Git worktree,
+and writes to a new permanent output directory. It stops before test-label access. The independent
+selection reviewer then uses `scripts/review_qm9_fixed_split.py`; formal Stage B repeats the same
+private-input command with `--selection-approval APPROVAL.json`. The optional
 `--mist-validation-predictions <STRICT_NPZ>` enables the supplemental all-model ensemble; omitting
 it must record an explicit omission rather than fabricating validation predictions.
 
-The runner is fail-closed. An interrupted or incomplete output is not resumable and must not be
-overwritten or reused. Keep it as failure evidence and choose a fresh output directory for the
-next preflight or full-run attempt.
+The runner is fail-closed. Only the exact `AWAITING_SELECTION_REVIEW` state may continue, and only
+with an approval bound to its unchanged manifest and global-freeze hashes. Every other interrupted
+or incomplete output is not resumable and must not be overwritten. The same provenance contract
+is written by preflight and formal manifests: Git commit/branch/clean state, Git tree, stable hash
+of all tracked files, `uv.lock`, config, runtime/library versions including RDKit/PyTorch/XGBoost,
+OS, CUDA, and GPU identity.
 
-Expected outputs are `manifest.json`, one record and prediction set per seed, `summary.json`, and
-`loss-monitor.html`, as specified in
+Expected outputs are `manifest.json`, approval artifacts, one record and prediction set per seed,
+`summary.json`, `loss-monitor.html`, and the final publication-manifest checksum, as specified in
 [`qm9_fixed_split_v2_live_tasks.md`](qm9_fixed_split_v2_live_tasks.md). Until the five-seed run and
 its output verification are complete, v2 must be described as implemented but not yet executed.

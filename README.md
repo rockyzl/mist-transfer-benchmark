@@ -29,7 +29,9 @@ row memberships.
 The completed v1 fixed-split result is now being extended by a deliberately narrower repeated
 evaluation: traditional models will be rerun across five model seeds while the split and released
 MIST inference artifact remain fixed. The v2 runner is implemented and QA-validated but the full
-five-seed run is **not yet executed**, so it does not yet add scientific results. See the
+five-seed run is **not yet executed**, so it does not yet add scientific results. Execution is now
+split into selection freeze, independently approved test evaluation, and independently approved
+publication; no stage can approve itself. See the
 [`v2 protocol`](docs/qm9_fixed_split_v2_protocol.md) and
 [`live task/handoff record`](docs/qm9_fixed_split_v2_live_tasks.md). The exact reproduction command
 is the reviewed interface in [`docs/reproducibility.md`](docs/reproducibility.md). V2 structural

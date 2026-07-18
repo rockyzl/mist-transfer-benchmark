@@ -47,9 +47,12 @@ step cannot be treated as scientifically authorized merely because its code ran 
 | Test unlock | Permit one test-label read from the immutable global-freeze hash. | Recompute and verify the gate, artifact trail, and zero prior test reads before authorization. |
 | Publication | Produce only preregistered metrics, intervals, runtime, and novelty strata. | Independent scientific review checks claims against artifacts before the article, site, or headline is updated. |
 
-The preflight and run manifest expose these checkpoints as `critical_reviews`. Automated reviews
-are evidence checks, not a substitute for the independent publication review. A completed run has
-`publication_ready=false` until that final review is performed outside the training runner.
+The preflight and run manifest expose these checkpoints as `critical_reviews`. Automated checks
+never set a human review to passed. Stage A stops at `AWAITING_SELECTION_REVIEW` with zero test
+label reads. A separately invoked reviewer command creates an approval artifact bound to both the
+global-freeze hash and the reviewed manifest hash. Only a second runner invocation may enter Stage
+B. Stage B stops at `AWAITING_PUBLICATION_REVIEW` with `publication_ready=false`; a second,
+independent publication approval is required before any v2-aware builder may consume the result.
 
 ## Frozen inputs and identities
 
@@ -154,24 +157,43 @@ freeze covering:
 - hashes of all validation prediction arrays, including fixed MIST validation predictions when
   the supplemental layer is enabled.
 
-The canonical selection-freeze subtree is hashed, written atomically, fsynced, and then read back
-and verified. Only that hash authorizes one test-label access. The loader must expose no test
-labels to fitting or validation-selection functions. The manifest event sequence records
-`input-verified`, five `seed-selection-frozen` events, `global-test-gate-frozen`, five
-`seed-test-complete` events, and `summary-frozen`.
+The formal manifest and global freeze also carry one shared provenance contract: Git commit and
+branch, clean/dirty state, Git tree, `uv.lock` hash, canonical and file config hashes, Python,
+NumPy, scikit-learn, RDKit, PyTorch, and XGBoost versions, CUDA availability, GPU name, operating
+system, and a stable SHA-256 over every tracked repository file. A dirty worktree may be inspected
+by preflight or smoke but is rejected before a formal Stage A or Stage B run.
 
-V2 is deliberately fail-closed and does not resume an incomplete run. A new run requires a new,
-nonexistent output directory. If an output directory contains an incomplete manifest, failed seed,
-partial prediction set, or a gate without the final summary event, the runner rejects it and
-requires a different output directory; it never overwrites, continues, or reauthorizes that gate.
-The incomplete directory is retained as failure evidence. A complete output directory may be
-reused only as a read-only completed result after the runner verifies the config, input, code,
-selection-gate, event-sequence, and every recorded artifact hash and byte size. Any missing or
-changed artifact rejects reuse.
+The canonical selection-freeze subtree is hashed, written atomically, fsynced, and then read back
+and verified. Stage A then stops. An independent reviewer verifies the seed records, loss monitor,
+artifact hashes, and global freeze and creates `selection-review-approval.json` with reviewer,
+time, decision, notes, reviewed manifest SHA-256, and global-freeze SHA-256. Stage B rejects a
+missing, malformed, stale, or mismatched approval. Only a matching approval authorizes exactly one
+test-label read; both gate implementations reject every second read. The loader exposes no test
+labels to fitting or validation-selection functions, and the manifest records authorization and
+the exact read count as separate events.
+
+V2 is deliberately fail-closed. The only permitted continuation is the exact
+`AWAITING_SELECTION_REVIEW` directory entering Stage B with a matching approval artifact. An
+interrupted training/selection directory, failed seed, partial prediction set, changed artifact,
+or any other incomplete state is not resumable and must be retained as failure evidence. A
+completed evaluation is read-only except for the separate publication-review transition. Every
+continuation re-verifies config, input, repository/runtime identity, gate, event state, artifact
+hash, and byte size.
 
 After the gate, each frozen model predicts the test features in the exact fixed test-row order.
 The test labels are loaded once to calculate the predetermined metrics. No test result may trigger
 a retry with a new seed, altered epoch, weight, threshold, feature, or model recipe.
+
+## Publication review gate
+
+Stage B always ends at `AWAITING_PUBLICATION_REVIEW` and `publication_ready=false`. The independent
+reviewer must inspect `summary.json`, `loss-monitor.html`, `manifest.json`, and every declared
+artifact hash. The publication approval records reviewer, time, decision, notes, the reviewed
+manifest SHA-256, and summary SHA-256. The separate publication command re-verifies these bindings,
+copies the approval into the run, writes a final manifest checksum sidecar, and only then changes
+the state to `PUBLICATION_APPROVED` and `publication_ready=true`. The v2-aware site/result builder
+calls the same verifier and refuses unapproved or subsequently modified manifests, summaries, or
+approval artifacts.
 
 ## Metric and uncertainty contract
 

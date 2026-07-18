@@ -9,12 +9,17 @@ from __future__ import annotations
 
 import hashlib
 import html
+import importlib.metadata
 import json
 import os
+import platform
 import resource
+import subprocess
+import sys
 import tempfile
 import time
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +37,8 @@ from .phase2_metrics import native_metrics
 
 CONFIG_SCHEMA = "qm9-fixed-mist-split-v2-config-v1"
 SUMMARY_SCHEMA = "qm9-fixed-mist-split-v2-summary-v1"
+APPROVAL_SCHEMA = "qm9-fixed-mist-split-v2-test-unlock-approval-v1"
+PUBLICATION_APPROVAL_SCHEMA = "qm9-fixed-mist-split-v2-publication-approval-v1"
 MODEL_KEYS = (
     "engineered_ridge",
     "xgboost",
@@ -126,6 +133,143 @@ def _mark_review(
 
 class FixedSplitEvaluationError(ValueError):
     """Raised when a fixed-split identity or leakage boundary is violated."""
+
+
+def collect_run_identity(repository: Path) -> dict[str, object]:
+    """Capture a stable identity for the repository, lock, runtime, and hardware."""
+
+    root = repository.resolve()
+
+    def git(*arguments: str) -> str:
+        completed = subprocess.run(
+            ["git", *arguments],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return completed.stdout.strip()
+
+    commit = git("rev-parse", "HEAD")
+    branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    tree = git("rev-parse", "HEAD^{tree}")
+    status = git("status", "--porcelain=v1", "--untracked-files=all")
+    tracked = git("ls-files", "-z").split("\0")
+    digest = hashlib.sha256()
+    tracked_count = 0
+    for relative in tracked:
+        if not relative:
+            continue
+        path = root / relative
+        if not path.is_file():
+            raise FixedSplitEvaluationError(f"tracked repository file is missing: {relative}")
+        encoded = relative.encode()
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        tracked_count += 1
+    lock_path = root / "uv.lock"
+    if not lock_path.is_file():
+        raise FixedSplitEvaluationError("uv.lock is required for the formal run identity")
+    dependency_versions = {}
+    for distribution in (
+        "numpy",
+        "scipy",
+        "scikit-learn",
+        "rdkit",
+        "torch",
+        "xgboost",
+    ):
+        try:
+            dependency_versions[distribution] = importlib.metadata.version(distribution)
+        except importlib.metadata.PackageNotFoundError:
+            dependency_versions[distribution] = None
+    try:
+        import torch
+
+        cuda_available = bool(torch.cuda.is_available())
+        cuda_device = torch.cuda.get_device_name(0) if cuda_available else None
+    except ImportError:
+        cuda_available = False
+        cuda_device = None
+    return {
+        "schema_version": "qm9-fixed-mist-split-v2-run-identity-v1",
+        "git": {
+            "commit": commit,
+            "branch": branch,
+            "tree": tree,
+            "dirty": bool(status),
+            "status_sha256": canonical_hash(status),
+        },
+        "repository": {
+            "tracked_files": tracked_count,
+            "tracked_worktree_sha256": digest.hexdigest(),
+        },
+        "dependency_lock": {"path": "uv.lock", "sha256": file_sha256(lock_path)},
+        "dependencies": dependency_versions,
+        "runtime": {
+            "python": sys.version,
+            "python_executable": sys.executable,
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "cpu_count": os.cpu_count(),
+            "cuda_available": cuda_available,
+            "cuda_device": cuda_device,
+        },
+    }
+
+
+def require_clean_run_identity(identity: Mapping[str, Any]) -> None:
+    """Reject a formal scientific stage when tracked or untracked work differs."""
+
+    if identity.get("git", {}).get("dirty") is not False:
+        raise FixedSplitEvaluationError("formal fixed-split execution requires a clean worktree")
+
+
+def load_review_approval(
+    path: Path, gate_hash: str, reviewed_manifest_hash: str
+) -> dict[str, object]:
+    """Validate a separately authored approval bound to the frozen selection gate."""
+
+    approval = json.loads(path.read_text(encoding="utf-8"))
+    required = {
+        "schema_version",
+        "decision",
+        "global_freeze_sha256",
+        "reviewed_manifest_sha256",
+        "reviewer",
+        "reviewed_at_utc",
+        "notes",
+    }
+    if set(approval) != required:
+        raise FixedSplitEvaluationError("review approval schema fields are not exact")
+    if approval["schema_version"] != APPROVAL_SCHEMA:
+        raise FixedSplitEvaluationError("review approval schema differs")
+    if approval["decision"] != "approve-test-unlock":
+        raise FixedSplitEvaluationError("review did not approve test unlock")
+    if approval["global_freeze_sha256"] != gate_hash:
+        raise FixedSplitEvaluationError("review approval belongs to another global freeze")
+    if approval["reviewed_manifest_sha256"] != reviewed_manifest_hash:
+        raise FixedSplitEvaluationError("review approval belongs to another manifest state")
+    for key in ("reviewer", "reviewed_at_utc"):
+        if not isinstance(approval[key], str) or not approval[key].strip():
+            raise FixedSplitEvaluationError(f"review approval requires nonempty {key}")
+    _validate_review_time(str(approval["reviewed_at_utc"]))
+    if not isinstance(approval["notes"], str) or not approval["notes"].strip():
+        raise FixedSplitEvaluationError("review approval notes must be nonempty")
+    return approval
+
+
+def _validate_review_time(value: str) -> None:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise FixedSplitEvaluationError("reviewed_at_utc must be ISO-8601") from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise FixedSplitEvaluationError("reviewed_at_utc must include a timezone")
 
 
 def canonical_hash(value: object) -> str:
@@ -387,14 +531,18 @@ class TargetAccessGate:
         self.authorized = False
         self.read_count = 0
 
-    def authorize(self, gate_hash: str) -> None:
+    def authorize(self, gate_hash: str, reviewed_gate_hash: str) -> None:
         if len(gate_hash) != 64:
             raise FixedSplitEvaluationError("test authorization requires a SHA-256 gate")
+        if reviewed_gate_hash != gate_hash:
+            raise FixedSplitEvaluationError("approval hash does not match the frozen gate")
         self.authorized = True
 
     def read(self) -> np.ndarray:
         if not self.authorized:
             raise FixedSplitEvaluationError("test labels requested before global freeze")
+        if self.read_count != 0:
+            raise FixedSplitEvaluationError("test labels may be read exactly once")
         self.read_count += 1
         return self.__values.copy()
 
@@ -410,6 +558,8 @@ class LazyTestTargetGate(TargetAccessGate):
     def read(self) -> np.ndarray:
         if not self.authorized:
             raise FixedSplitEvaluationError("test labels requested before global freeze")
+        if self.read_count != 0:
+            raise FixedSplitEvaluationError("test labels may be read exactly once")
         self.read_count += 1
         values = np.asarray(self._loader(), dtype=np.float64)
         if values.ndim != 2 or values.shape[1] != len(TARGET_COLUMNS):
@@ -736,6 +886,7 @@ def run_smoke_protocol(
     output_dir: Path,
     *,
     include_mist_validation: bool = True,
+    review_approval_path: Path | None = None,
 ) -> dict[str, object]:
     """Run the full leakage/checkpoint/output contract on deterministic synthetic data."""
 
@@ -748,6 +899,13 @@ def run_smoke_protocol(
     train, validation, test = np.arange(60), np.arange(60, 75), np.arange(75, 90)
     mist_validation = y[validation] + rng.normal(scale=0.18, size=(15, 12))
     mist_test = y[test] + rng.normal(scale=0.18, size=(15, 12))
+    run_identity = collect_run_identity(Path.cwd())
+    config_path = Path("configs/qm9_fixed_split_evaluation_v2.toml")
+    run_identity["config"] = {
+        "canonical_sha256": canonical_hash(config),
+        "file_sha256": file_sha256(config_path),
+        "path": str(config_path),
+    }
     return run_fixed_split(
         config,
         x,
@@ -764,6 +922,8 @@ def run_smoke_protocol(
             "mode": "deterministic-public-smoke-v1",
             "x_sha256": canonical_hash(x.tolist()),
         },
+        run_identity=run_identity,
+        review_approval_path=review_approval_path,
         smoke=True,
     )
 
@@ -782,6 +942,8 @@ def run_fixed_split(
     output_dir: Path,
     *,
     input_identity: Mapping[str, Any],
+    run_identity: Mapping[str, Any],
+    review_approval_path: Path | None = None,
     smoke: bool = False,
     structural_novelty_labels: np.ndarray | None = None,
 ) -> dict[str, object]:
@@ -802,13 +964,16 @@ def run_fixed_split(
     manifest_path = output_dir / "manifest.json"
     config_hash = canonical_hash(config)
     identity_hash = canonical_hash(input_identity)
-    code_hash = file_sha256(Path(__file__))
+    run_identity_hash = canonical_hash(run_identity)
+    code_hash = str(run_identity["repository"]["tracked_worktree_sha256"])
     manifest = {
         "schema_version": "qm9-fixed-mist-split-v2-manifest-v1",
         "config_sha256": config_hash,
         "code_sha256": code_hash,
         "input_identity_sha256": identity_hash,
         "input_identity": dict(input_identity),
+        "run_identity_sha256": run_identity_hash,
+        "run_identity": dict(run_identity),
         "selected_seeds": list(config["seeds"]),
         "selected_cells": [],
         "completed_seeds": [],
@@ -817,12 +982,17 @@ def run_fixed_split(
         "events": [],
         "critical_reviews": critical_review_plan(),
         "publication_ready": False,
+        "stage": "training-selection",
         "complete": False,
         "test_access": {"authorized": False, "read_count": 0},
     }
+    resuming_after_review = False
     if manifest_path.exists():
         old = json.loads(manifest_path.read_text())
-        if old.get("complete") is not True:
+        if (
+            old.get("complete") is not True
+            and old.get("stage") != "AWAITING_SELECTION_REVIEW"
+        ):
             raise FixedSplitEvaluationError(
                 "incomplete output is not resumable; choose a new output directory"
             )
@@ -831,9 +1001,10 @@ def run_fixed_split(
                 old.get("config_sha256") != config_hash,
                 old.get("code_sha256") != code_hash,
                 old.get("input_identity_sha256") != identity_hash,
+                old.get("run_identity_sha256") != run_identity_hash,
             )
         ):
-            raise FixedSplitEvaluationError("complete output identity differs")
+            raise FixedSplitEvaluationError("existing output identity differs")
         for relative, expected in old.get("artifact_sha256", {}).items():
             path = output_dir / relative
             if not path.is_file() or file_sha256(path) != expected:
@@ -842,8 +1013,18 @@ def run_fixed_split(
                 raise FixedSplitEvaluationError(
                     f"complete output artifact size changed: {relative}"
                 )
-        return old
-    _atomic_json(manifest_path, manifest)
+        if old.get("complete") is True:
+            return old
+        if review_approval_path is None:
+            return old
+        manifest = old
+        resuming_after_review = True
+    else:
+        if review_approval_path is not None:
+            raise FixedSplitEvaluationError(
+                "review approval cannot be supplied before the selection freeze exists"
+            )
+        _atomic_json(manifest_path, manifest)
 
     def record(event: str, relative: str | None = None) -> None:
         manifest["events"].append(
@@ -855,15 +1036,30 @@ def run_fixed_split(
         manifest["artifact_sha256"][relative] = file_sha256(path)
         manifest["artifact_bytes"][relative] = path.stat().st_size
 
-    record("run-created")
-    _mark_review(
-        manifest["critical_reviews"],
-        "input-boundary",
-        "automated-review-passed",
-        {"input_identity_sha256": identity_hash, "test_label_reads": 0},
-    )
-    record("critical-review-input-boundary-passed")
-    _atomic_json(manifest_path, manifest)
+    if not resuming_after_review:
+        record("run-created")
+        _mark_review(
+            manifest["critical_reviews"],
+            "input-boundary",
+            "automated-review-passed",
+            {"input_identity_sha256": identity_hash, "test_label_reads": 0},
+        )
+        record("critical-review-input-boundary-passed")
+        _atomic_json(manifest_path, manifest)
+    else:
+        return _complete_reviewed_run(
+            config=config,
+            test_gate=test_gate,
+            train_scale=np.std(y_train, axis=0),
+            mist_test=mist_test,
+            output_dir=output_dir,
+            manifest=manifest,
+            input_identity=input_identity,
+            structural_novelty_labels=structural_novelty_labels,
+            smoke=smoke,
+            run_started=run_started,
+            approval_path=review_approval_path,
+        )
     states: dict[int, Mapping[str, Any]] = {}
     seed_payloads = []
     train_scale = np.std(y_train, axis=0)
@@ -956,26 +1152,8 @@ def run_fixed_split(
     _atomic_json(gate_path, freeze)
     gate_hash = file_sha256(gate_path)
     register(gate_path)
-    record("global-freeze-closed", str(gate_path.relative_to(output_dir)))
-    _mark_review(
-        manifest["critical_reviews"],
-        "selection-freeze",
-        "automated-review-passed",
-        {"global_freeze_sha256": gate_hash, "selected_seed_count": len(seed_payloads)},
-    )
-    record("critical-review-selection-freeze-passed", str(gate_path.relative_to(output_dir)))
-    _mark_review(
-        manifest["critical_reviews"],
-        "test-unlock",
-        "automated-review-passed",
-        {"authorized_read_count": 1, "global_freeze_sha256": gate_hash},
-    )
-    record("critical-review-test-unlock-passed", str(gate_path.relative_to(output_dir)))
-    test_gate.authorize(gate_hash)
-    manifest["test_access"] = {"authorized": True, "gate_sha256": gate_hash, "read_count": 0}
-    _atomic_json(manifest_path, manifest)
-    y_test = test_gate.read()
-    per_seed_predictions: dict[str, list[np.ndarray]] = {key: [] for key in MODEL_KEYS}
+    record("global-freeze-draft-created", str(gate_path.relative_to(output_dir)))
+    manifest["predicted_seeds"] = []
     for payload in seed_payloads:
         seed = int(payload["seed"])
         prediction_started = time.perf_counter()
@@ -992,33 +1170,158 @@ def run_fixed_split(
             predictions["all_model_ensemble"] = blend(
                 supplemental, {**predictions, "mist": mist_test}
             )
-        metrics = {}
         for family, prediction in predictions.items():
+            if not np.all(np.isfinite(prediction)):
+                raise FixedSplitEvaluationError(f"nonfinite {family} test prediction")
             path = output_dir / "predictions" / f"{seed}-{family}.npy"
-            prediction_hash = _atomic_npy(path, prediction)
+            _atomic_npy(path, prediction)
             register(path)
-            if prediction_hash != manifest["artifact_sha256"][str(path.relative_to(output_dir))]:
-                raise FixedSplitEvaluationError("prediction hash registration failed")
+        payload["runtime"]["test_prediction_seconds"] = (
+            time.perf_counter() - prediction_started
+        )
+        payload["runtime"]["model_test_prediction_seconds"] = model_prediction_seconds
+        seed_path = output_dir / "seeds" / f"{seed}.json"
+        _atomic_json(seed_path, payload)
+        register(seed_path)
+        manifest["predicted_seeds"].append(seed)
+        record("seed-test-predictions-frozen", str(seed_path.relative_to(output_dir)))
+
+    loss_path = output_dir / "loss-monitor.html"
+    _atomic_text(loss_path, _loss_html(seed_payloads))
+    register(loss_path)
+    freeze["run_identity_sha256"] = run_identity_hash
+    freeze["run_identity"] = dict(run_identity)
+    freeze["test_prediction_sha256"] = {
+        relative: digest
+        for relative, digest in manifest["artifact_sha256"].items()
+        if relative.startswith("predictions/")
+    }
+    _atomic_json(gate_path, freeze)
+    gate_hash = file_sha256(gate_path)
+    register(gate_path)
+    record("global-freeze-finalized", str(gate_path.relative_to(output_dir)))
+    _mark_review(
+        manifest["critical_reviews"],
+        "selection-freeze",
+        "awaiting-human-review",
+        {"global_freeze_sha256": gate_hash, "selected_seed_count": len(seed_payloads)},
+    )
+    _mark_review(
+        manifest["critical_reviews"],
+        "test-unlock",
+        "blocked-awaiting-selection-approval",
+        {"global_freeze_sha256": gate_hash},
+    )
+    manifest["global_freeze_sha256"] = gate_hash
+    manifest["stage"] = "AWAITING_SELECTION_REVIEW"
+    manifest["test_access"] = {"authorized": False, "gate_sha256": gate_hash, "read_count": 0}
+    record("awaiting-selection-review", str(gate_path.relative_to(output_dir)))
+    _atomic_json(manifest_path, manifest)
+    return manifest
+
+
+def _complete_reviewed_run(
+    *,
+    config: Mapping[str, Any],
+    test_gate: TargetAccessGate,
+    train_scale: np.ndarray,
+    mist_test: np.ndarray,
+    output_dir: Path,
+    manifest: dict[str, Any],
+    input_identity: Mapping[str, Any],
+    structural_novelty_labels: np.ndarray | None,
+    smoke: bool,
+    run_started: float,
+    approval_path: Path | None,
+) -> dict[str, object]:
+    """Stage B: verify independent approval, read labels once, and score frozen predictions."""
+
+    if approval_path is None:
+        raise FixedSplitEvaluationError("selection approval artifact is required")
+    manifest_path = output_dir / "manifest.json"
+    gate_path = output_dir / "global-freeze-gate.json"
+    gate_hash = file_sha256(gate_path)
+    if gate_hash != manifest.get("global_freeze_sha256"):
+        raise FixedSplitEvaluationError("global freeze changed after selection")
+    approval = load_review_approval(approval_path, gate_hash, file_sha256(manifest_path))
+    approval_copy = output_dir / "selection-review-approval.json"
+    _atomic_json(approval_copy, approval)
+    relative_approval = str(approval_copy.relative_to(output_dir))
+    manifest["artifact_sha256"][relative_approval] = file_sha256(approval_copy)
+    manifest["artifact_bytes"][relative_approval] = approval_copy.stat().st_size
+
+    def record(event: str, relative: str | None = None) -> None:
+        manifest["events"].append(
+            {"sequence": len(manifest["events"]) + 1, "event": event, "artifact": relative}
+        )
+
+    _mark_review(
+        manifest["critical_reviews"],
+        "selection-freeze",
+        "human-review-passed",
+        {
+            "reviewer": approval["reviewer"],
+            "reviewed_at_utc": approval["reviewed_at_utc"],
+            "approval_sha256": file_sha256(approval_copy),
+            "global_freeze_sha256": gate_hash,
+        },
+    )
+    _mark_review(
+        manifest["critical_reviews"],
+        "test-unlock",
+        "human-review-passed",
+        {
+            "reviewer": approval["reviewer"],
+            "global_freeze_sha256": gate_hash,
+            "authorized_read_count": 1,
+        },
+    )
+    record("selection-review-approved", relative_approval)
+    test_gate.authorize(gate_hash, str(approval["global_freeze_sha256"]))
+    manifest["test_access"]["authorized"] = True
+    manifest["test_access"]["approval_sha256"] = file_sha256(approval_copy)
+    record("test-label-access-authorized", relative_approval)
+    _atomic_json(manifest_path, manifest)
+    y_test = test_gate.read()
+    manifest["test_access"]["read_count"] = test_gate.read_count
+    record("test-labels-read-once")
+    _atomic_json(manifest_path, manifest)
+
+    seed_payloads = []
+    per_seed_predictions: dict[str, list[np.ndarray]] = {key: [] for key in MODEL_KEYS}
+    for seed in config["seeds"]:
+        seed_path = output_dir / "seeds" / f"{seed}.json"
+        payload = json.loads(seed_path.read_text(encoding="utf-8"))
+        families = ["engineered_ridge", "xgboost", "mlp", "traditional_ensemble"]
+        if payload["validation"]["all_model_ensemble"] is not None:
+            families.append("all_model_ensemble")
+        metrics = {}
+        for family in families:
+            prediction = np.load(
+                output_dir / "predictions" / f"{seed}-{family}.npy", allow_pickle=False
+            )
+            if prediction.shape != y_test.shape or not np.all(np.isfinite(prediction)):
+                raise FixedSplitEvaluationError(f"invalid frozen {family} prediction")
             metrics[family] = native_metrics(y_test, prediction, train_scale)
             per_seed_predictions[family].append(prediction)
         payload["test_metrics"] = metrics
         payload["test_labels_read"] = True
-        payload["runtime"]["test_prediction_seconds"] = time.perf_counter() - prediction_started
-        payload["runtime"]["model_test_prediction_seconds"] = model_prediction_seconds
-        path = output_dir / "seeds" / f"{seed}.json"
-        _atomic_json(path, payload)
-        register(path)
-        record("seed-test-completed", str(path.relative_to(output_dir)))
-        manifest["completed_seeds"].append(seed)
-        _atomic_json(manifest_path, manifest)
+        _atomic_json(seed_path, payload)
+        relative = str(seed_path.relative_to(output_dir))
+        manifest["artifact_sha256"][relative] = file_sha256(seed_path)
+        manifest["artifact_bytes"][relative] = seed_path.stat().st_size
+        manifest["completed_seeds"].append(int(seed))
+        record("seed-test-completed", relative)
+        seed_payloads.append(payload)
+
     method_summary = {}
     paired = {}
     per_target = {}
-    for family, values in per_seed_predictions.items():
-        if not values:
+    for family, predictions in per_seed_predictions.items():
+        if not predictions:
             continue
-        seed_scores = [_score(y_test, value, train_scale) for value in values]
-        mean_prediction = np.mean(values, axis=0)
+        seed_scores = [_score(y_test, value, train_scale) for value in predictions]
+        mean_prediction = np.mean(predictions, axis=0)
         method_summary[family] = {
             "role": (
                 "primary-traditional"
@@ -1040,22 +1343,23 @@ def run_fixed_split(
             seed=20260718,
             confidence=float(config["bootstrap_confidence"]),
         )
-        metrics = native_metrics(y_test, mean_prediction, train_scale)
+        averaged_metrics = native_metrics(y_test, mean_prediction, train_scale)
         per_target[family] = {}
         for target_index, target in enumerate(TARGET_COLUMNS):
-            values_by_seed = [
+            seed_values = [
                 float(
-                    np.mean(np.abs(prediction[:, target_index] - y_test[:, target_index]))
+                    np.mean(np.abs(value[:, target_index] - y_test[:, target_index]))
                     / train_scale[target_index]
                 )
-                for prediction in values
+                for value in predictions
             ]
             per_target[family][target] = {
-                "seed_values": values_by_seed,
-                "mean": float(np.mean(values_by_seed)),
-                "std": float(np.std(values_by_seed, ddof=1)),
-                "seed_averaged_prediction_metrics": metrics["per_target"][target],
+                "seed_values": seed_values,
+                "mean": float(np.mean(seed_values)),
+                "std": float(np.std(seed_values, ddof=1)),
+                "seed_averaged_prediction_metrics": averaged_metrics["per_target"][target],
             }
+
     fixed_mist_metrics = native_metrics(y_test, mist_test, train_scale)
     fixed_mist_ci = prediction_bootstrap(
         y_test,
@@ -1066,9 +1370,8 @@ def run_fixed_split(
         confidence=float(config["bootstrap_confidence"]),
     )
     supplemental_available = bool(per_seed_predictions["all_model_ensemble"])
-    novelty: dict[str, object]
     if structural_novelty_labels is None:
-        novelty = {
+        novelty: dict[str, object] = {
             "status": "not-estimated-in-synthetic-smoke" if smoke else "unavailable",
             "reason": (
                 "synthetic rows have no molecular structures"
@@ -1087,7 +1390,9 @@ def run_fixed_split(
                 "rows": int(mask.sum()),
                 "fixed_mist": native_metrics(y_test[mask], mist_test[mask], train_scale),
                 "methods": {
-                    family: native_metrics(y_test[mask], np.mean(values, axis=0)[mask], train_scale)
+                    family: native_metrics(
+                        y_test[mask], np.mean(values, axis=0)[mask], train_scale
+                    )
                     for family, values in per_seed_predictions.items()
                     if values
                 },
@@ -1098,9 +1403,10 @@ def run_fixed_split(
             "strata": strata,
             "similarity_bins": {
                 "status": "not-computed",
-                "reason": "no separately authenticated nearest-train similarity cache supplied",
+                "reason": "no authenticated nearest-train similarity cache supplied",
             },
         }
+
     summary = {
         "schema_version": SUMMARY_SCHEMA,
         "fixed_mist": {
@@ -1129,7 +1435,7 @@ def run_fixed_split(
             "test_label_reads": test_gate.read_count,
             "total_wall_seconds": time.perf_counter() - run_started,
             "process_peak_rss": _peak_rss(),
-            "per_seed": {str(payload["seed"]): payload["runtime"] for payload in seed_payloads},
+            "per_seed": {str(item["seed"]): item["runtime"] for item in seed_payloads},
             "historical_mist": input_identity.get(
                 "mist_historical_runtime",
                 {"status": "unavailable", "reason": "not supplied by input provenance"},
@@ -1139,19 +1445,128 @@ def run_fixed_split(
     }
     summary_path = output_dir / "summary.json"
     _atomic_json(summary_path, summary)
-    loss_path = output_dir / "loss-monitor.html"
-    _atomic_text(loss_path, _loss_html(seed_payloads))
-    register(summary_path)
-    register(loss_path)
-    record("summary-completed", "summary.json")
+    for artifact in (summary_path, output_dir / "loss-monitor.html"):
+        relative = str(artifact.relative_to(output_dir))
+        manifest["artifact_sha256"][relative] = file_sha256(artifact)
+        manifest["artifact_bytes"][relative] = artifact.stat().st_size
+    record("summary-frozen", "summary.json")
     _mark_review(
         manifest["critical_reviews"],
         "publication",
-        "independent-review-required",
-        {"summary": "summary.json", "loss_monitor": "loss-monitor.html"},
+        "awaiting-independent-review",
+        {
+            "summary_sha256": file_sha256(summary_path),
+            "required_artifacts": ["summary.json", "loss-monitor.html", "manifest.json"],
+        },
     )
-    record("critical-review-publication-pending", "summary.json")
-    manifest["test_access"]["read_count"] = test_gate.read_count
+    manifest["stage"] = "AWAITING_PUBLICATION_REVIEW"
+    manifest["publication_ready"] = False
     manifest["complete"] = len(manifest["completed_seeds"]) == len(config["seeds"])
+    record("awaiting-publication-review", "summary.json")
     _atomic_json(manifest_path, manifest)
+    return manifest
+
+
+def approve_publication(output_dir: Path, approval_path: Path) -> dict[str, object]:
+    """Stage C: approve publication only against the exact reviewed evaluation state."""
+
+    manifest_path = output_dir / "manifest.json"
+    manifest_hash_before = file_sha256(manifest_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("stage") != "AWAITING_PUBLICATION_REVIEW":
+        raise FixedSplitEvaluationError("run is not awaiting publication review")
+    if manifest.get("publication_ready") is not False:
+        raise FixedSplitEvaluationError("publication state is not fail-closed")
+    for relative, expected in manifest.get("artifact_sha256", {}).items():
+        artifact = output_dir / relative
+        if not artifact.is_file() or file_sha256(artifact) != expected:
+            raise FixedSplitEvaluationError(f"publication artifact changed: {relative}")
+        if artifact.stat().st_size != manifest["artifact_bytes"].get(relative):
+            raise FixedSplitEvaluationError(f"publication artifact size changed: {relative}")
+    approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    required = {
+        "schema_version",
+        "decision",
+        "reviewed_manifest_sha256",
+        "summary_sha256",
+        "reviewer",
+        "reviewed_at_utc",
+        "notes",
+    }
+    if set(approval) != required or approval.get("schema_version") != PUBLICATION_APPROVAL_SCHEMA:
+        raise FixedSplitEvaluationError("publication approval schema differs")
+    if approval.get("decision") != "approve-publication":
+        raise FixedSplitEvaluationError("publication review did not approve release")
+    if approval.get("reviewed_manifest_sha256") != manifest_hash_before:
+        raise FixedSplitEvaluationError("publication approval belongs to another manifest state")
+    summary_hash = file_sha256(output_dir / "summary.json")
+    if approval.get("summary_sha256") != summary_hash:
+        raise FixedSplitEvaluationError("publication approval belongs to another summary")
+    for key in ("reviewer", "reviewed_at_utc"):
+        if not isinstance(approval.get(key), str) or not approval[key].strip():
+            raise FixedSplitEvaluationError(f"publication approval requires nonempty {key}")
+    _validate_review_time(str(approval["reviewed_at_utc"]))
+    if not isinstance(approval.get("notes"), str) or not approval["notes"].strip():
+        raise FixedSplitEvaluationError("publication approval notes must be nonempty")
+    selection_review = next(
+        item for item in manifest["critical_reviews"] if item["id"] == "selection-freeze"
+    )
+    if approval["reviewer"] == selection_review.get("evidence", {}).get("reviewer"):
+        raise FixedSplitEvaluationError(
+            "publication reviewer must differ from the selection reviewer"
+        )
+    copied = output_dir / "publication-review-approval.json"
+    _atomic_json(copied, approval)
+    relative = str(copied.relative_to(output_dir))
+    manifest["artifact_sha256"][relative] = file_sha256(copied)
+    manifest["artifact_bytes"][relative] = copied.stat().st_size
+    _mark_review(
+        manifest["critical_reviews"],
+        "publication",
+        "independent-review-passed",
+        {
+            "reviewer": approval["reviewer"],
+            "reviewed_at_utc": approval["reviewed_at_utc"],
+            "reviewed_manifest_sha256": manifest_hash_before,
+            "summary_sha256": summary_hash,
+            "approval_sha256": file_sha256(copied),
+        },
+    )
+    manifest["publication_ready"] = True
+    manifest["stage"] = "PUBLICATION_APPROVED"
+    manifest["events"].append(
+        {
+            "sequence": len(manifest["events"]) + 1,
+            "event": "publication-review-approved",
+            "artifact": relative,
+        }
+    )
+    _atomic_json(manifest_path, manifest)
+    _atomic_text(
+        output_dir / "manifest.publication.sha256",
+        f"{file_sha256(manifest_path)}  manifest.json\n",
+    )
+    return manifest
+
+
+def require_publication_ready(output_dir: Path) -> dict[str, object]:
+    """Fail closed before any builder consumes a v2 result."""
+
+    manifest_path = output_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("publication_ready") is not True:
+        raise FixedSplitEvaluationError("v2 result is not approved for publication")
+    if manifest.get("stage") != "PUBLICATION_APPROVED":
+        raise FixedSplitEvaluationError("v2 publication stage differs")
+    sidecar_path = output_dir / "manifest.publication.sha256"
+    if not sidecar_path.is_file() or sidecar_path.read_text(encoding="ascii") != (
+        f"{file_sha256(manifest_path)}  manifest.json\n"
+    ):
+        raise FixedSplitEvaluationError("published manifest checksum differs")
+    for relative, expected in manifest.get("artifact_sha256", {}).items():
+        artifact = output_dir / relative
+        if not artifact.is_file() or file_sha256(artifact) != expected:
+            raise FixedSplitEvaluationError(f"published artifact changed: {relative}")
+        if artifact.stat().st_size != manifest["artifact_bytes"].get(relative):
+            raise FixedSplitEvaluationError(f"published artifact size changed: {relative}")
     return manifest
