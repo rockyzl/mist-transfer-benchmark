@@ -40,6 +40,16 @@ def test_smoke_writes_exact_v2_contract(tmp_path: Path) -> None:
     assert manifest["complete"] is True
     assert manifest["test_access"]["read_count"] == 1
     assert manifest["selected_seeds"] == manifest["completed_seeds"]
+    assert manifest["publication_ready"] is False
+    review_status = {
+        review["id"]: review["status"] for review in manifest["critical_reviews"]
+    }
+    assert review_status == {
+        "input-boundary": "automated-review-passed",
+        "selection-freeze": "automated-review-passed",
+        "test-unlock": "automated-review-passed",
+        "publication": "independent-review-required",
+    }
     summary = json.loads((tmp_path / "summary.json").read_text())
     assert summary["schema_version"] == SUMMARY_SCHEMA
     assert summary["fixed_mist"]["inference_only"] is True

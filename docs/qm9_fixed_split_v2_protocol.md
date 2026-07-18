@@ -35,6 +35,22 @@ written. V2 will add repeated-seed traditional results, paired-row uncertainty, 
 structural-novelty strata, runtime accounting, and MLP learning-curve monitoring. No v1 point
 estimate may be relabeled as a v2 repeated result.
 
+## Critical-step Plan -> Execute -> Review gates
+
+Every critical step has a written plan before execution and a recorded review afterward. A later
+step cannot be treated as scientifically authorized merely because its code ran successfully.
+
+| Checkpoint | Plan | Required review |
+|---|---|---|
+| Input boundary | Freeze identities, membership, row order, dependencies, and the no-test-label boundary. | Automated provenance/leakage checks pass before fitting; lead reviews the private preflight. |
+| Selection freeze | Train all five seeds and make validation-only decisions. | Review seed completeness, scalers, selected rounds/epochs, loss anomalies, ensemble weights, and prediction hashes. |
+| Test unlock | Permit one test-label read from the immutable global-freeze hash. | Recompute and verify the gate, artifact trail, and zero prior test reads before authorization. |
+| Publication | Produce only preregistered metrics, intervals, runtime, and novelty strata. | Independent scientific review checks claims against artifacts before the article, site, or headline is updated. |
+
+The preflight and run manifest expose these checkpoints as `critical_reviews`. Automated reviews
+are evidence checks, not a substitute for the independent publication review. A completed run has
+`publication_ready=false` until that final review is performed outside the training runner.
+
 ## Frozen inputs and identities
 
 The runner must reject the run before fitting if any frozen identity differs.

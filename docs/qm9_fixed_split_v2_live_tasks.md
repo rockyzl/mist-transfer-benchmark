@@ -34,6 +34,10 @@ attempt, preserve it for diagnosis and start the next attempt in a fresh output 
 
 ## Acceptance criteria
 
+- [ ] Every critical step has a recorded Plan -> Execute -> Review checkpoint.
+- [x] Input-boundary and private-preflight review passes before the full run starts.
+- [ ] Selection-freeze and test-unlock reviews pass before any test-label read.
+- [ ] Independent publication review passes before site/article claims are changed.
 - [ ] Existing released MIST is inference-only and evaluated only on its compatible fixed split.
 - [ ] Five predetermined traditional-model seeds run on the same split.
 - [ ] Hyperparameters and feature schema are frozen before test access.
@@ -60,7 +64,9 @@ attempt, preserve it for diagnosis and start the next attempt in a fresh output 
 - [x] Fixed-split v2 runner implemented.
 - [x] Reproducibility and README handoff updated without claiming v2 results.
 - [x] Independent QA completed; requested changes were implemented and lead-revalidated.
+- [x] Critical-step Plan -> Execute -> Review contract added to protocol and runtime artifacts.
 - [x] Deterministic smoke and hardened private-artifact preflight completed.
+- [x] Paper runtime dependencies installed and dependency-aware private preflight repeated.
 - [ ] Full five-seed run executed (not started).
 
 ## Decisions

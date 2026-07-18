@@ -64,6 +64,64 @@ EXPECTED_MONITORING = {
     "loss_nonfinite_is_abnormal": True,
     "restore_best_epoch": True,
 }
+CRITICAL_REVIEW_PLAN = (
+    {
+        "id": "input-boundary",
+        "plan": "Verify immutable inputs, row order, split membership, and no test-label access.",
+        "review": "Automated identity and leakage-boundary checks must pass before fitting.",
+    },
+    {
+        "id": "selection-freeze",
+        "plan": "Train all five seeds and freeze validation-only model and ensemble decisions.",
+        "review": (
+            "Review seed artifacts, loss anomalies, scalers, and prediction hashes before "
+            "test access."
+        ),
+    },
+    {
+        "id": "test-unlock",
+        "plan": "Authorize exactly one test-label read from the verified global freeze hash.",
+        "review": (
+            "Verify the global gate and event trail immediately before unlocking test labels."
+        ),
+    },
+    {
+        "id": "publication",
+        "plan": "Generate the predetermined metrics, uncertainty, runtime, and subgroup artifacts.",
+        "review": (
+            "Independent scientific review is required before any headline or article update."
+        ),
+    },
+)
+
+
+def critical_review_plan(
+    input_review_evidence: object | None = None,
+) -> list[dict[str, object]]:
+    """Return fresh, machine-readable Plan -> Execute -> Review checkpoints."""
+
+    reviews = [
+        {**step, "status": "planned", "evidence": None} for step in CRITICAL_REVIEW_PLAN
+    ]
+    if input_review_evidence is not None:
+        _mark_review(
+            reviews,
+            "input-boundary",
+            "automated-review-passed",
+            input_review_evidence,
+        )
+    return reviews
+
+
+def _mark_review(
+    reviews: list[dict[str, object]], review_id: str, status: str, evidence: object
+) -> None:
+    for review in reviews:
+        if review["id"] == review_id:
+            review["status"] = status
+            review["evidence"] = evidence
+            return
+    raise FixedSplitEvaluationError(f"unknown critical review checkpoint: {review_id}")
 
 
 class FixedSplitEvaluationError(ValueError):
@@ -757,6 +815,8 @@ def run_fixed_split(
         "artifact_sha256": {},
         "artifact_bytes": {},
         "events": [],
+        "critical_reviews": critical_review_plan(),
+        "publication_ready": False,
         "complete": False,
         "test_access": {"authorized": False, "read_count": 0},
     }
@@ -796,6 +856,14 @@ def run_fixed_split(
         manifest["artifact_bytes"][relative] = path.stat().st_size
 
     record("run-created")
+    _mark_review(
+        manifest["critical_reviews"],
+        "input-boundary",
+        "automated-review-passed",
+        {"input_identity_sha256": identity_hash, "test_label_reads": 0},
+    )
+    record("critical-review-input-boundary-passed")
+    _atomic_json(manifest_path, manifest)
     states: dict[int, Mapping[str, Any]] = {}
     seed_payloads = []
     train_scale = np.std(y_train, axis=0)
@@ -889,6 +957,20 @@ def run_fixed_split(
     gate_hash = file_sha256(gate_path)
     register(gate_path)
     record("global-freeze-closed", str(gate_path.relative_to(output_dir)))
+    _mark_review(
+        manifest["critical_reviews"],
+        "selection-freeze",
+        "automated-review-passed",
+        {"global_freeze_sha256": gate_hash, "selected_seed_count": len(seed_payloads)},
+    )
+    record("critical-review-selection-freeze-passed", str(gate_path.relative_to(output_dir)))
+    _mark_review(
+        manifest["critical_reviews"],
+        "test-unlock",
+        "automated-review-passed",
+        {"authorized_read_count": 1, "global_freeze_sha256": gate_hash},
+    )
+    record("critical-review-test-unlock-passed", str(gate_path.relative_to(output_dir)))
     test_gate.authorize(gate_hash)
     manifest["test_access"] = {"authorized": True, "gate_sha256": gate_hash, "read_count": 0}
     _atomic_json(manifest_path, manifest)
@@ -1062,6 +1144,13 @@ def run_fixed_split(
     register(summary_path)
     register(loss_path)
     record("summary-completed", "summary.json")
+    _mark_review(
+        manifest["critical_reviews"],
+        "publication",
+        "independent-review-required",
+        {"summary": "summary.json", "loss_monitor": "loss-monitor.html"},
+    )
+    record("critical-review-publication-pending", "summary.json")
     manifest["test_access"]["read_count"] = test_gate.read_count
     manifest["complete"] = len(manifest["completed_seeds"]) == len(config["seeds"])
     _atomic_json(manifest_path, manifest)

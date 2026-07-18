@@ -63,6 +63,15 @@ The runner, deterministic smoke, private preflight, and final QA revalidation ar
 commands below are the reviewed interface; their presence is not evidence that the full five-seed
 v2 experiment has run.
 
+Install the real-training backends before private preflight or execution:
+
+```bash
+uv sync --extra paper --frozen
+```
+
+The preflight fails closed if PyTorch or XGBoost is unavailable and records their versions plus
+CUDA availability. CPU execution remains valid but will be materially slower than the GPU route.
+
 Deterministic smoke:
 
 ```bash

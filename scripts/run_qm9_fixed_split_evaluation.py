@@ -16,6 +16,7 @@ from mist_transfer_benchmark.qm9.data import load_qm9_identities
 from mist_transfer_benchmark.qm9.fixed_split_evaluation import (
     FixedSplitEvaluationError,
     LazyTestTargetGate,
+    critical_review_plan,
     file_sha256,
     run_fixed_split,
     run_smoke_protocol,
@@ -62,6 +63,22 @@ def _load_mist_validation(path: Path | None, expected_indices: np.ndarray) -> np
 
 
 def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
+    try:
+        import torch
+        import xgboost
+    except ImportError as error:
+        raise FixedSplitEvaluationError(
+            "real fixed-split execution requires the paper dependencies; "
+            "run `uv sync --extra paper --frozen`"
+        ) from error
+    runtime_dependencies = {
+        "torch_version": torch.__version__,
+        "xgboost_version": xgboost.__version__,
+        "torch_cuda_available": bool(torch.cuda.is_available()),
+        "torch_cuda_device": (
+            torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+        ),
+    }
     with Path("configs/qm9_28m.toml").open("rb") as handle:
         phase1_config = tomllib.load(handle)
     identities = load_qm9_identities(args.qm9_csv)
@@ -166,6 +183,7 @@ def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
             "input_identity": identity,
             "rows": {"train": len(train), "validation": len(validation), "test": len(test)},
             "features": {"shape": list(features.shape), "nnz": int(features.nnz)},
+            "runtime_dependencies": runtime_dependencies,
             "structural_novelty": {
                 label: int(np.sum(novelty_labels == label)) for label in sorted(set(novelty_labels))
             },
@@ -176,6 +194,14 @@ def _run_real(args: argparse.Namespace, config: dict) -> dict[str, object]:
                 else "omitted-no-fixed-mist-validation-predictions"
             ),
             "test_labels_read": False,
+            "critical_reviews": critical_review_plan(
+                {
+                    "test_labels_read": False,
+                    "source_csv_sha256": identity["source_csv_sha256"],
+                    "split_membership_sha256": identity["split_membership_sha256"],
+                }
+            ),
+            "next_required_review": "selection-freeze",
         }
         path = args.output / "preflight.json"
         path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")

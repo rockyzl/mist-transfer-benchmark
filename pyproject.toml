@@ -32,6 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 paper = [
+  "torch>=2.7,<3",
   "xgboost>=3.0,<4",
 ]
 dev = [
