@@ -26,6 +26,17 @@ it does not compare a raw foundation checkpoint or retrain MIST. The available e
 candidate reconstruction of the checkpoint's split, not a claim that the publisher released exact
 row memberships.
 
+The completed v1 fixed-split result is now being extended by a deliberately narrower repeated
+evaluation: traditional models will be rerun across five model seeds while the split and released
+MIST inference artifact remain fixed. The v2 runner is implemented and QA-validated but the full
+five-seed run is **not yet executed**, so it does not yet add scientific results. See the
+[`v2 protocol`](docs/qm9_fixed_split_v2_protocol.md) and
+[`live task/handoff record`](docs/qm9_fixed_split_v2_live_tasks.md). The exact reproduction command
+is the reviewed interface in [`docs/reproducibility.md`](docs/reproducibility.md). V2 structural
+reporting is limited to seen versus
+unseen scaffolds within the unchanged test cohort; it does not introduce a new split or promise a
+Tanimoto analysis.
+
 The original redox track turns the broader transfer question into a falsifiable benchmark.
 Redox-potential regression is useful for organic molecules and battery electrolytes while also
 being unusually easy to evaluate incorrectly. The redox-specific material below remains active and

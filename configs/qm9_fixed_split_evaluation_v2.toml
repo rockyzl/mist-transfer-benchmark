@@ -1,0 +1,29 @@
+schema_version = "qm9-fixed-mist-split-v2-config-v1"
+seeds = [20260713, 20260729, 20260811, 20260823, 20260907]
+target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
+bootstrap_samples = 2000
+bootstrap_confidence = 0.95
+
+[frozen_winners]
+feature_representation = "count_ecfp_plus_globals"
+ridge_alpha = 10.0
+xgboost_max_depth = 10
+xgboost_learning_rate = 0.03
+xgboost_n_estimators = 1100
+xgboost_subsample = 0.85
+xgboost_colsample_bytree = 0.90
+xgboost_min_child_weight = 1.0
+xgboost_early_stopping_rounds = 35
+mlp_hidden_dims = [768, 384]
+mlp_dropout = 0.02
+mlp_learning_rate = 0.0007
+mlp_weight_decay = 0.00001
+mlp_batch_size = 512
+mlp_max_epochs = 80
+mlp_patience = 10
+mlp_min_delta = 0.0001
+
+[monitoring]
+validation_increase_mark_after = 2
+loss_nonfinite_is_abnormal = true
+restore_best_epoch = true
