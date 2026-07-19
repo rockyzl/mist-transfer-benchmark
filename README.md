@@ -39,6 +39,18 @@ reporting is limited to seen versus
 unseen scaffolds within the unchanged test cohort; it does not introduce a new split or promise a
 Tanimoto analysis.
 
+A separate **post-specified v3 model-selection study** now has a protocol and hash-chained
+train-only W1/W2/W3 runner for comparing frozen
+feature/model candidates using identity-group inner cross-validation plus a train-only scaffold
+stress analysis. Independent QA has not yet approved a private run, and it has not produced a
+result. Because v1/v2 work already
+examined the candidate outer validation and test cohorts, v3 will report them as historically
+observed—not blind or untouched—even though fresh exactly-once access gates are enforced. Formal
+v2 output remains read-only and will not proceed to Stage B through v3. See the
+[`v3 protocol`](docs/qm9_model_selection_v3_protocol.md),
+[`v3 live task record`](docs/qm9_model_selection_v3_live_tasks.md), and Wave-1 smoke commands in
+[`docs/reproducibility.md`](docs/reproducibility.md).
+
 The original redox track turns the broader transfer question into a falsifiable benchmark.
 Redox-potential regression is useful for organic molecules and battery electrolytes while also
 being unusually easy to evaluate incorrectly. The redox-specific material below remains active and

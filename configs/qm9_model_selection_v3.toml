@@ -1,0 +1,158 @@
+schema_version = "qm9-model-selection-v3-config-v1"
+fold_assignment_seed = 20260713
+training_seeds = [20260713, 20260729, 20260811, 20260823, 20260907]
+inner_tune_fraction = 0.10
+identity_folds = 5
+scaffold_stress_folds = 5
+target_order = ["mu", "alpha", "homo", "lumo", "gap", "r2", "zpve", "u0", "u298", "h298", "g298", "cv"]
+
+[budget]
+max_candidate_fits = 160
+max_wall_seconds = 43200
+smoke_max_candidate_fits = 24
+smoke_max_wall_seconds = 120
+
+[budget.wave_fit_limits]
+scaler_ablation = 123
+feature_screen = 120
+full_selection = 150
+
+[waves.scaler_ablation]
+protocol_wave = "W1"
+identity_folds = 3
+training_seed_count = 1
+candidate_cap = 41
+promotion_cap = 12
+family_coverage = 2
+xgboost_n_estimators_cap = 200
+mlp_epoch_cap = 20
+
+[waves.feature_screen]
+protocol_wave = "W2"
+identity_folds = 5
+scaffold_folds = 5
+training_seed_count = 1
+candidate_cap = 12
+promotion_cap = 3
+
+[waves.full_selection]
+protocol_wave = "W3"
+identity_folds = 5
+scaffold_folds = 5
+training_seed_count = 5
+candidate_cap = 3
+promotion_cap = 1
+
+[feature_selection]
+recipes = ["descriptor_scaled_only", "all_sparse_scaled", "all_raw", "log_count_descriptor_scaled", "drop_constant_descriptor_scaled"]
+
+[ridge]
+alphas = [0.1, 1.0, 10.0, 100.0]
+complexity_tiers = [0, 0, 0, 0]
+runtime_tiers = [0, 0, 0, 0]
+
+[xgboost]
+early_stopping_rounds = 35
+
+[[xgboost.candidates]]
+id = "shallow_fast"
+max_depth = 4
+learning_rate = 0.08
+n_estimators = 650
+subsample = 0.90
+colsample_bytree = 0.90
+min_child_weight = 1.0
+complexity_tier = 1
+runtime_tier = 1
+
+[[xgboost.candidates]]
+id = "balanced_d8"
+max_depth = 8
+learning_rate = 0.045
+n_estimators = 900
+subsample = 0.85
+colsample_bytree = 0.85
+min_child_weight = 1.0
+complexity_tier = 2
+runtime_tier = 2
+
+[[xgboost.candidates]]
+id = "deep_slow"
+max_depth = 10
+learning_rate = 0.03
+n_estimators = 1100
+subsample = 0.85
+colsample_bytree = 0.90
+min_child_weight = 1.0
+complexity_tier = 3
+runtime_tier = 3
+
+[mlp]
+max_epochs = 80
+patience = 10
+min_delta = 0.0001
+batch_size = 512
+
+[[mlp.preprocessing_ablation]]
+id = "descriptor_scaled_only"
+scale_all_sparse = false
+
+[[mlp.preprocessing_ablation]]
+id = "all_sparse_scaled"
+scale_all_sparse = true
+
+[[mlp.candidates]]
+id = "compact"
+hidden_dims = [384, 192]
+dropout = 0.05
+learning_rate = 0.001
+weight_decay = 0.00001
+complexity_tier = 1
+runtime_tier = 1
+
+[[mlp.candidates]]
+id = "wide_low_dropout"
+hidden_dims = [768, 384]
+dropout = 0.02
+learning_rate = 0.0007
+weight_decay = 0.00001
+complexity_tier = 2
+runtime_tier = 2
+
+[[mlp.candidates]]
+id = "deep"
+hidden_dims = [768, 384, 192]
+dropout = 0.08
+learning_rate = 0.0007
+weight_decay = 0.00003
+complexity_tier = 3
+runtime_tier = 3
+
+[monitoring]
+validation_increase_mark_after = 2
+max_validation_mnmae_after_five_epochs = 0.5
+minimum_relative_train_improvement_by_epoch_ten = 0.01
+gradient_norm_hard_max = 100.0
+gradient_norm_hard_min = 0.00000001
+gradient_min_consecutive_batches = 3
+target_degradation_warning = 0.02
+
+[ranking]
+one_se_formula = "best-primary-mean-plus-best-fold-SE"
+fold_metric_ddof = 1
+statistical_unit = "fold-after-seed-average"
+tie_tolerance = 0.001
+
+[ensemble]
+solver = "SLSQP"
+ftol = 0.000000000001
+maxiter = 10000
+constraints = "nonnegative-sum-to-one"
+multistarts = "simplex-vertices-plus-uniform"
+complexity_tier = 4
+runtime_tier = 0
+
+[oof]
+dtype = "float64"
+axis_order = ["training_seed", "fixed_train_row", "target"]
+semantic_hash_schema = "qm9-model-selection-v3-oof-semantic-v1"

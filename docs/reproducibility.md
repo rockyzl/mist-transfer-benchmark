@@ -163,3 +163,97 @@ Expected outputs are `manifest.json`, approval artifacts, one record and predict
 `summary.json`, `loss-monitor.html`, and the final publication-manifest checksum, as specified in
 [`qm9_fixed_split_v2_live_tasks.md`](qm9_fixed_split_v2_live_tasks.md). Until the five-seed run and
 its output verification are complete, v2 must be described as implemented but not yet executed.
+
+## QM9 post-specified model selection v3
+
+V3 is a separate post-specified lineage, not a v2.1 patch. V1/v2 work already exposed the fixed
+candidate validation and test results, so procedural label gates do not make those cohorts blind
+again. Formal v2 outputs remain read-only and v3 must never use a v2 directory as its input or
+continuation point.
+
+The public smoke CLI below is implemented. It exercises only a synthetic train-only state machine: the
+XGBoost records use a labeled Extra-Trees surrogate and the MLP record uses deterministic synthetic
+curves. `complete: true` means the smoke artifact set is complete, not that real model selection,
+outer confirmation, test evaluation, or a scientific result exists.
+
+Planned environment and synthetic smoke:
+
+```bash
+uv sync --extra paper --frozen
+
+uv run --extra paper python scripts/run_qm9_model_selection_v3.py \
+  --smoke \
+  --config configs/qm9_model_selection_v3.toml \
+  --output results/qm9-model-selection-v3-smoke
+```
+
+Authenticated train-only waves use the same four private artifacts and require an explicit wave.
+The interface exists, but independent QA has **not approved private execution**. The three commands
+below document the exact hash-chained interface; do not run them until the remaining protocol/code
+blockers in the live task record are resolved and independently re-reviewed. W1 has no prior lock:
+
+```bash
+uv run --extra paper python scripts/run_qm9_model_selection_v3.py \
+  --wave scaler-ablation \
+  --config configs/qm9_model_selection_v3.toml \
+  --output results/qm9-model-selection-v3-W1-<ATTEMPT_ID> \
+  --qm9-csv data/private/qm9/qm9.csv \
+  --feature-matrix data/private/qm9/paper-evaluation-v1/feature_matrix.npz \
+  --feature-manifest data/private/qm9/paper-evaluation-v1/manifest.json \
+  --phase1-dir results/qm9-phase1-v2
+```
+
+W2 must consume the validated W1 lock:
+
+```bash
+uv run --extra paper python scripts/run_qm9_model_selection_v3.py \
+  --wave feature-screen \
+  --prior-selection-lock results/qm9-model-selection-v3-W1-<ATTEMPT_ID>/selection_lock.json \
+  --config configs/qm9_model_selection_v3.toml \
+  --output results/qm9-model-selection-v3-W2-<ATTEMPT_ID> \
+  --qm9-csv data/private/qm9/qm9.csv \
+  --feature-matrix data/private/qm9/paper-evaluation-v1/feature_matrix.npz \
+  --feature-manifest data/private/qm9/paper-evaluation-v1/manifest.json \
+  --phase1-dir results/qm9-phase1-v2
+```
+
+W3 must consume the validated W2 lock:
+
+```bash
+uv run --extra paper python scripts/run_qm9_model_selection_v3.py \
+  --wave full-selection \
+  --prior-selection-lock results/qm9-model-selection-v3-W2-<ATTEMPT_ID>/selection_lock.json \
+  --config configs/qm9_model_selection_v3.toml \
+  --output results/qm9-model-selection-v3-W3-<ATTEMPT_ID> \
+  --qm9-csv data/private/qm9/qm9.csv \
+  --feature-matrix data/private/qm9/paper-evaluation-v1/feature_matrix.npz \
+  --feature-manifest data/private/qm9/paper-evaluation-v1/manifest.json \
+  --phase1-dir results/qm9-phase1-v2
+```
+
+The frozen mapping is W1 `scaler-ablation` (41 candidates, 3 folds, 1 seed, 123-fit ceiling), W2
+`feature-screen` (at most 12 candidates, 5 identity folds plus one-SE scaffold stress, 1 seed,
+120-fit ceiling), and W3 `full-selection` (at most 3 finalists, 5 identity folds, 5 scaffold
+folds, 5 seeds, 150-fit ceiling, OOF ensemble).
+
+Every wave requires a fresh output directory. The CLI exposes no outer-validation or test-target
+argument. The separate, hash-bound outer-confirmation, test-approval/exactly-once, and publication
+interfaces remain **pending engineering implementation and documentation alignment**.
+
+Public smoke artifacts are `selection_manifest.json`, `feature_audit.json`,
+`candidate_records/features.json`,
+`candidate_records/ridge.json`, `candidate_records/xgboost.json`,
+`candidate_records/mlp.json`, `budget_ledger.json`, `recursive_why/index.json`,
+`selection_lock.json`, and
+`selection_lock.sha256`. The lock records `outer_validation_targets_read=false` and
+`test_targets_read=false`.
+
+Authenticated wave artifacts additionally include `candidate_records/scaffold_stress.json`. The
+presence of any of these files is not evidence that the frozen selection, recursive failure
+analysis, ensemble, or publication contract has passed QA.
+
+Retain the complete candidate ledger, fold/group assignments, OOF predictions, scaler/checkpoint
+records, runtime/failure logs, recursive Why records, manifest/event log, approvals, outer
+confirmation, test summary, and final checksums. No v3 output is publishable until the independent
+G7 review passes. See the [`v3 protocol`](qm9_model_selection_v3_protocol.md) and
+[`v3 live tasks`](qm9_model_selection_v3_live_tasks.md).
