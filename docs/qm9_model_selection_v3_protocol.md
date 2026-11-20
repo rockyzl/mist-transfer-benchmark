@@ -1,10 +1,40 @@
 # QM9 post-specified model selection v3 protocol
 
-Status: protocol being implemented; no private v3 selection or v3 result has run
+Status: first private W1 attempt terminated incomplete at the 12-hour budget; no v3 result exists
 
 Protocol date: 2026-07-18
 
 Author: Lu Zhang (张鲁), independent research
+
+## 2026-07-19 W1 execution outcome
+
+The first W1 attempt ran from clean commit `8a52139` in
+`results/qm9-model-selection-v3-w1-8a52139-20260718T234500Z`. It reached the frozen
+43,200-second wall-clock budget before all 123 fits completed, and an external watchdog sent
+`SIGTERM`. The runner had not emitted durable per-epoch telemetry, candidate checkpoints, a
+partial ledger, or a governed failure artifact. No outer-validation or test labels were read.
+
+This attempt is `REJECT_INCOMPLETE_RUNTIME`, not a negative model result. No candidate ranking,
+partial promotion, or scientific conclusion may be derived from it. W2-W7 remain locked.
+
+The run exposed a protocol-level observability defect: final atomic artifacts were incorrectly
+used as a substitute for separate live telemetry. A process being alive did not establish which
+candidate/fold/epoch was active or whether loss was healthy. A v3.1 lineage is required before
+another long run. It must add:
+
+- a real-backend instrumented smoke;
+- append-only heartbeat, loss, per-target metrics, stage timings, resource and budget telemetry;
+- continuous wall/RSS/GPU-memory/temperature/disk/heartbeat hard stops;
+- explicit memory estimates plus representative measured peak and safety margin;
+- nonfinite loss/gradient/parameter/prediction/scaler checks;
+- durable candidate checkpoints and signal-safe failure evidence;
+- exact command/code/dirty/dependency/hardware/precision provenance; and
+- stage-level profiling before choosing CPU cache, GPU cache, memmap, sparse-native computation,
+  or another performance correction.
+
+Dense MLP remains a control baseline for nonlinear learning on the fixed ECFP representation.
+Sparse neural architectures are a separate scientific question and cannot be introduced as an
+execution-only repair.
 
 ## Scope and historical boundary
 

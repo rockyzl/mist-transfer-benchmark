@@ -1,6 +1,6 @@
 # QM9 post-specified model selection v3 live tasks
 
-Status date: 2026-07-18
+Status date: 2026-07-19
 
 ## Objective
 
@@ -20,29 +20,37 @@ validation or test cohorts blind again.
   lock-integrity, and explicit-smoke code paths implemented.
 - [x] Independent protocol and implementation review rounds 1-4 plus final W1 CLI review completed.
 - [x] Synthetic governance/search smoke completed (29 focused tests plus public smoke).
-- [ ] Private input/EDA preflight completed.
-- [ ] Private W1-W3 train-only model selection run started.
+- [x] Private input/EDA preflight completed without outer-validation or test-label access.
+- [x] Private W1 started from commit `8a52139` and was terminated at the frozen 43,200-second
+  wall-clock budget without completing.
+- [ ] Private W1-W3 train-only model selection completed.
 - [ ] One outer-validation confirmation executed.
 - [ ] Test-unlock approval issued.
 - [ ] V3 test labels read exactly once.
 - [ ] Publication review completed.
 
-## Current QA decision
+## Current QA decision and W1 outcome
 
 Final scoped QA decision: `APPROVE_PRIVATE_W1`. The W1 CLI now persists a governed failure manifest,
 recursive Why record, checksum-valid failure lock, zero-fit evidence, and false outer/test read
 flags when a forbidden prior lock is supplied. The full 29-test synthetic suite and ruff pass.
-Approval is limited to executing W1 `scaler-ablation` once in a fresh permanent output directory
-with the exact reviewed config and authenticated four-artifact input set. It does not approve W2,
-W3, outer confirmation, test access, publication, or any scientific/model-ranking claim.
+That approval was consumed by the run in
+`results/qm9-model-selection-v3-w1-8a52139-20260718T234500Z`. An external watchdog sent `SIGTERM`
+at 43,201 elapsed seconds because the wave had not completed. The runner had written no durable
+candidate, curve, ledger, checkpoint, manifest, or failure artifact. The empty/incomplete directory
+is preserved. No partial model ranking exists and none may be reconstructed from resource logs.
+
+Current decision: `REJECT_INCOMPLETE_RUNTIME`. W2, W3, outer confirmation, test access,
+publication, and every scientific/model-ranking claim remain prohibited.
 
 ## Evidence boundary
 
 - V1 already observed the fixed candidate validation and test scores.
 - V2 governance and preflight work is complete, but the formal v2 five-seed directory is read-only
   and must not proceed to Stage B as part of v3.
-- V3 implementation is currently in progress.
-- No private v3 feature/model selection has run.
+- The first private W1 attempt ran for 12 hours but did not finish or produce a selection artifact.
+- The W1 process remained alive, but missing live loss/progress telemetry made liveness insufficient
+  evidence of candidate-level progress.
 - No outer-validation or test labels have been read by the v3 runner.
 - No v3 result exists, and no website/article/model-ranking claim may be updated from this work.
 
@@ -62,17 +70,22 @@ W3, outer confirmation, test access, publication, or any scientific/model-rankin
   outer-validation confirmation; then separately approved test and publication gates.
 - MIST is a fixed reference and never participates in v3 model selection.
 
-## Next implementation gate
+## Next implementation gate: profiling and v3.1 observability correction
 
 Next governed gate:
 
-1. choose a fresh permanent W1 output directory and record the exact command/config/repository and
-   authenticated input hashes before execution;
-2. execute W1 `scaler-ablation` without `--prior-selection-lock` and preserve the complete output;
-3. independently verify the 123-fit ledger, all 41 complete candidates, source/fold provenance,
-   failure/anomaly evidence, family-coverage promotion, zero outer/test reads, and lock checksums;
-4. issue a hash-bound W1 artifact review before considering W2; and
-5. do not start W2 under this W1-only approval.
+1. preserve the failed W1 directory and watchdog/resource evidence; do not resume or infer a rank;
+2. run one fold and one real MLP configuration with stage timers for sparse slicing, `toarray`,
+   tensor creation, host-to-device transfer, forward, backward, optimizer, validation, and
+   checkpointing;
+3. measure RSS, GPU allocated/reserved/peak memory, utilization, temperature, I/O, and epoch time;
+4. choose CPU cache, GPU cache, chunk cache, memmap, or unchanged streaming only from profiling;
+5. prove any execution-only optimization preserves the first batch, loss trajectory, and
+   predictions within frozen tolerances;
+6. implement append-only heartbeat/loss/progress telemetry, signal-safe failure evidence, durable
+   candidate checkpoints, continuous wall/memory/temperature/disk gates, and complete provenance;
+7. exercise the real Torch/XGBoost backends in an instrumented smoke before another long run; and
+8. create and independently approve a new v3.1 lineage before rerunning W1. Do not start W2.
 
 ## Durable rules
 
@@ -83,4 +96,7 @@ Next governed gate:
 - Do not read test labels without a bound approval after a confirmed outer-validation result.
 - Do not rerun after outer/test access under the same protocol because a score is disappointing.
 - Preserve incomplete and failed directories plus recursive Why records.
+- Treat missing or stale telemetry as unhealthy; process liveness alone is not progress evidence.
+- Do not approve a run expected to exceed ten minutes without real-backend live observability and
+  a measured peak-memory gate.
 - Treat smoke, preflight, EDA, inner-CV ranking, and unapproved outputs as engineering evidence only.

@@ -51,6 +51,9 @@ packages = ["src/mist_transfer_benchmark"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+markers = [
+  "integration: bounded real-process seam tests that require explicit pre-run approval",
+]
 
 [tool.ruff]
 line-length = 100

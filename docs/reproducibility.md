@@ -257,3 +257,43 @@ records, runtime/failure logs, recursive Why records, manifest/event log, approv
 confirmation, test summary, and final checksums. No v3 output is publishable until the independent
 G7 review passes. See the [`v3 protocol`](qm9_model_selection_v3_protocol.md) and
 [`v3 live tasks`](qm9_model_selection_v3_live_tasks.md).
+
+## QM9 model selection v3.1
+
+The approved v3 W1 attempt at commit `8a52139` reached 43,201 seconds, was terminated by the
+external watchdog, and left an empty preserved output directory. It is
+`REJECT_INCOMPLETE_RUNTIME`; it is not a model result and cannot be resumed or used to infer a
+candidate rank or computational bottleneck.
+
+V3.1 is an execution-governance correction that adds immutable start provenance, append-only
+events and trial ledger, independent heartbeat/resource sidecar, durable checkpoints, soft/hard
+deadline handling, real-backend profiling, memory/runtime feasibility, numerical-equivalence tests,
+signal-safe failure evidence and independent approval. See the
+[`v3.1 protocol`](qm9_model_selection_v31_protocol.md) and
+[`v3.1 live tasks`](qm9_model_selection_v31_live_tasks.md).
+
+There is currently **no reproducible v3.1 training command** because implementation, real-backend
+smoke, profiling and independent review are incomplete. Do not adapt or rerun the v3 command under
+a v3.1 output name. The first permitted commands will be bounded, train-only profiling and
+instrumented real-backend smokes after their CLI/config schemas are implemented and reviewed.
+
+The first Wave 1 component QA is `REQUEST_CHANGES`. Unit tests for the current components passing
+does not authorize a real smoke. Before any command is documented, remediation must prove stable
+start/run event binding, reviewed schema, truncated-tail quarantine, parent-directory durability,
+checkpoint semantic integrity, strict plan+ledger completed replay, authenticated actual-data cache
+identity, frozen profile/choice, terminal immutability and the partial-ranking tripwire.
+
+Before documenting a private W1 command, the repository must contain and independently approve:
+
+1. exact protocol/config/code/dependency/input/hardware hashes;
+2. a real Ridge/XGBoost/Torch smoke with <=30-second heartbeat and live loss/progress/resources;
+3. measured peak memory with at least 20% headroom;
+4. a conservative W1 projection no greater than 34,080 seconds;
+5. execution-equivalence evidence for every performance correction;
+6. passing signal/deadline/stale-heartbeat/resource/nonfinite/partial-ranking tests; and
+7. governed real smoke for every backend and intended hardware path, with skipped paths explicitly
+   unapproved; and
+8. a W1-only approval naming the exact command and fresh permanent output directory.
+
+Until then, v3.1 status is `WAVE1_QA_REMEDIATION_IN_PROGRESS`, `scientific_result=false`,
+`publication_ready=false`, with W1-W7 locked.
